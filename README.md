@@ -25,7 +25,7 @@ Edit the `.env` file to insert the credentials needed to connect to the database
 
 Enable pgvector and set up the table we need in the database
 ```shell
-./create_index.py
+./create_table.py
 ```
 
 Calculate the embeddings for the pictures in the `photos` directory, and

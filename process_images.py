@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 
-"""Notebook 2: process the images
+"""Calculate embeddings for our images, and upload them to PostgreSQL
 """
 
 import os
 
 import clip
+import psycopg
 import torch
 
 from dotenv import load_dotenv
-from opensearchpy import OpenSearch
 from PIL import Image
 
 load_dotenv()
-SERVICE_URI = os.getenv("SERVICE_URI")
-
-opensearch = OpenSearch(SERVICE_URI, use_ssl=True)
+SERVICE_URI = os.getenv("PG_SERVICE_URI")
 
 # Load the open CLIP model
 print('Loading CLIP model')
@@ -33,7 +31,6 @@ image_dir = "photos"
 # Batch size for processing images and indexing embeddings
 batch_size = 100
 
-from opensearchpy.helpers import bulk
 
 def compute_clip_features(photos_batch):
     # Load all the photos from the files
@@ -51,24 +48,36 @@ def compute_clip_features(photos_batch):
     return photos_features.cpu().numpy()
 
 
-def index_embeddings_to_opensearch(data):
-    actions = []
-    for d in data:
-        action = {
-            "_index": "photos",  # Update with your index name
-            "_source": {
-                "image_url": d['image_url'],
-                "embedding": d['embedding'].tolist()
-            }
-        }
-        actions.append(action)
-    success, _ = bulk(opensearch, actions, index="photos")
-    print(f"Indexed {success} embeddings to OpenSearch")
+def index_embeddings_to_postgres(data):
+    """Write a batch of data rows to PostgreSQL
+
+    It's probably a bit wasteful to create a new connection for each batch,
+    but it means we don't need to worry about a potentially long running
+    connection.
+
+    See https://www.psycopg.org/psycopg3/docs/basic/copy.html for more on
+    the use of COPY.
+    """
+    try:
+        with psycopg.connect(SERVICE_URI) as conn:
+            with conn.cursor() as cur:
+                with cur.copy('COPY pictures (filename, embedding) FROM STDIN') as copy:
+                    for row in data:
+                        copy.write_row(row)
+    except Exception as exc:
+        print(f'{exc.__class__.__name__}: {exc}')
+
+
+def vector_to_string(embedding):
+    """Convert our (ndarry) embedding vector into a string that SQL can use.
+    """
+    vector_str = ", ".join(str(x) for x in embedding.tolist())
+    vector_str = f'[{vector_str}]'
+    return vector_str
 
 
 # Iterate over images and process them in batches
 
-# List to store embeddings
 data = []
 
 # Process images in batches
@@ -83,15 +92,16 @@ for i in range(0, len(image_files), batch_size):
 
     # Create data dictionary for indexing
     for file_path, embedding in zip(batch_file_paths, batch_embeddings):
-        data.append({'image_url': file_path, 'embedding': embedding})
+        data.append((file_path, vector_to_string(embedding)))
 
     # Check if we have enough data to index
     if len(data) >= batch_size:
-        index_embeddings_to_opensearch(data)
+        index_embeddings_to_postgres(data)
         data = []
 
 # Index any remaining data
 if len(data) > 0:
-    index_embeddings_to_opensearch(data)
+    print('Remaining embeddings')
+    index_embeddings_to_postgres(data)
 
 print("All embeddings indexed successfully.")

@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 
-"""Notebook 3: find things
+"""Find images that match a (hard coded) text string and report their filenames.
+
+This is intended as a way to check that everything necessary to run the app is
+actually working
 """
 
 import logging
 import os
 
 import clip
+import psycopg
 import torch
 
 from dotenv import load_dotenv
-from opensearchpy import OpenSearch
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,10 +23,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-SERVICE_URI = os.getenv("SERVICE_URI")
+SERVICE_URI = os.getenv("PG_SERVICE_URI")
 
-logger.info('Creating OpenSearch connection')
-opensearch = OpenSearch(SERVICE_URI, use_ssl=True)
 
 # Load the open CLIP model
 logger.info('Importing CLIP model')
@@ -45,45 +46,49 @@ def get_single_embedding(text):
     return text_features.cpu().numpy()[0]
 
 
-def knn_search(text):
+def vector_to_string(embedding):
+    """Convert our (ndarry) embedding vector into a string that SQL can use.
+    """
+    vector_str = ", ".join(str(x) for x in embedding.tolist())
+    vector_str = f'[{vector_str}]'
+    return vector_str
+
+
+def search_for_matches(text):
+    """Search for the "nearest" four images
+
+    See [Querying](https://github.com/pgvector/pgvector?tab=readme-ov-file#querying)
+    in the pgvector documentation.
+
+    pgvector distance functions (see are:
+
+    * <-> - L2 distance
+    * <#> - (negative) inner product
+    * <=> - cosine distance
+    * <+> - L1 distance (added in 0.7.0)
+    """
     vector = get_single_embedding(text)
 
-    body = {
-        "query": {
-            "knn": {
-                "embedding": {
-                    "vector": vector.tolist(),  # Convert to list
-                    "k": 4  # Number of nearest neighbors to retrieve
-                }
-            }
-        }
-    }
+    embedding_string = vector_to_string(vector)
 
     # Perform search
-    result = opensearch.search(index=INDEX_NAME, body=body)
-    return result
-
-
-def find_images(result):
-    # Check if hits are present in the result
-    if 'hits' in result and 'hits' in result['hits']:
-        hits = result['hits']['hits']
-
-        # Loop through each hit, up to a maximum of 4
-        for i, hit in enumerate(hits[:4]):
-            if '_source' in hit and 'image_url' in hit['_source']:
-                image_url = hit['_source']['image_url']
-
-                print(f"Found image {i+1}: {image_url}")
-            else:
-                print(f"Hit {i+1} does not contain an 'image_url' key.")
-
-    else:
-        print("Invalid result format or no hits found.")
+    try:
+        with psycopg.connect(SERVICE_URI) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM pictures ORDER BY embedding <-> %s LIMIT 4;",
+                    (embedding_string,),
+                )
+                rows = cur.fetchall()
+                return [row[0] for row in rows]
+    except Exception as exc:
+        print(f'{exc.__class__.__name__}: {exc}')
+        return []
 
 
 text_input = "man jumping"  # Provide your text input here
 logger.info(f'Searching for {text_input!r}')
-result = knn_search(text_input)
+matches = search_for_matches(text_input)
 
-find_images(result)
+for index, filename in enumerate(matches):
+    print(f'{index+1}: {filename}')

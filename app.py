@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 
+"""An app to find (the first four) images matching a text string, and display them.
+"""
+
 import logging
 import os
 
 from typing import Annotated, Union
 
 import clip
+import psycopg
 import torch
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Form
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from opensearchpy import OpenSearch
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+# Our images are kept locally, so make them available to the `img` tag
 app.mount("/photos", StaticFiles(directory="photos"), name="photos")
 
 
@@ -30,18 +33,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-SERVICE_URI = os.getenv("SERVICE_URI")
-
-logger.info('Creating OpenSearch connection')
-opensearch = OpenSearch(SERVICE_URI, use_ssl=True)
+SERVICE_URI = os.getenv("PG_SERVICE_URI")
 
 # Load the open CLIP model
 logger.info('Importing CLIP model')
 device = "cuda" if torch.cuda.is_available() else "cpu"
 logger.info(f'Using {device}')
 model, preprocess = clip.load("ViT-B/32", device=device)
-
-index_name = "photos"  # Update with your index name
 
 
 def get_single_embedding(text):
@@ -55,44 +53,36 @@ def get_single_embedding(text):
     return text_features.cpu().numpy()[0]
 
 
-def knn_search(text):
+def vector_to_string(embedding):
+    """Convert our (ndarry) embedding vector into a string that SQL can use.
+    """
+    vector_str = ", ".join(str(x) for x in embedding.tolist())
+    vector_str = f'[{vector_str}]'
+    return vector_str
+
+
+def search_for_matches(text):
+    logger.info(f'Searching for {text!r}')
     vector = get_single_embedding(text)
 
-    body = {
-        "query": {
-            "knn": {
-                "embedding": {
-                    "vector": vector.tolist(),  # Convert to list
-                    "k": 4  # Number of nearest neighbors to retrieve
-                }
-            }
-        }
-    }
+    embedding_string = vector_to_string(vector)
 
     # Perform search
-    result = opensearch.search(index=index_name, body=body)
-    return result
+    try:
+        with psycopg.connect(SERVICE_URI) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM pictures ORDER BY embedding <-> %s LIMIT 4;",
+                    (embedding_string,),
+                )
+                rows = cur.fetchall()
+                return [row[0] for row in rows]
+    except Exception as exc:
+        print(f'{exc.__class__.__name__}: {exc}')
+        return []
 
 
-def find_images(search_text):
-    logger.info(f'Searching for {search_text!r}')
-    result = knn_search(search_text)
 
-    image_urls = []
-    if 'hits' in result and 'hits' in result['hits']:
-        hits = result['hits']['hits']
-
-        # Loop through each hit, up to a maximum of 4
-        for i, hit in enumerate(hits[:4]):
-            if '_source' in hit and 'image_url' in hit['_source']:
-                image_urls.append(hit['_source']['image_url'])
-            else:
-                logging.warning(f"Hit {i+1} does not contain an 'image_url' key.")
-
-    else:
-        logging.error("Invalid result format or no hits found.")
-
-    return image_urls
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -103,41 +93,17 @@ async def index(request: Request):
         context={
             "search_hint": "Find images like...",
         },
-        #context={"images": []},
     )
 
 
 @app.post("/search_form", response_class=HTMLResponse)
 async def search_form(request: Request, search_text: Annotated[str, Form()]):
     logging.info(f'Search form requests {search_text!r}')
-    images = find_images(search_text)
+    images = search_for_matches(search_text)
     return templates.TemplateResponse(
         request=request,
         name="images.html",
         context={
-            #"images": ['HQw3rB-2ON8.jpg', 'RIwKjm3TVMU.jpg'],
             "images": images,
         }
     )
-
-
-@app.get("/search/{text}")
-def read_item(text: str, q: Union[str, None] = None):
-    logger.info(f'Searching for {text!r}')
-    result = knn_search(text)
-
-    image_urls = []
-    if 'hits' in result and 'hits' in result['hits']:
-        hits = result['hits']['hits']
-
-        # Loop through each hit, up to a maximum of 4
-        for i, hit in enumerate(hits[:4]):
-            if '_source' in hit and 'image_url' in hit['_source']:
-                image_urls.append(hit['_source']['image_url'])
-            else:
-                logging.warning(f"Hit {i+1} does not contain an 'image_url' key.")
-
-    else:
-        logging.error("Invalid result format or no hits found.")
-
-    return {"image_urls": image_urls}

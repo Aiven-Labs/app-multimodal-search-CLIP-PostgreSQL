@@ -1,7 +1,7 @@
 typing
 fastapi[standard]
 jinja2
-opensearch-py
+psycopg[binary]
 python-dotenv
 git+https://github.com/openai/CLIP.git
 ftfy
