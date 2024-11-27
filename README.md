@@ -1,4 +1,4 @@
-# An app for searching for images matching a text, using CLIP, PostgreSQL and pgvector
+# An app for searching for images matching a text, using CLIP, PostgreSQL® and pgvector
 
 A Python web web app that searches for images matching a given text
 
@@ -24,11 +24,23 @@ python3 -m pip install -r requirements.txt
 >     mkdir models
 >     curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output models/ViT-B-32.pt
 
-Copy the template environent file, and then edit the `.env` file to insert the credentials needed to connect to the database
+Create your PostgreSQL® database. An Aiven for PostgreSQL service will do very
+well - see the [Create a
+service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
+section in the [Aiven documentation](https://aiven.io/docs).
+
+Copy the template environment file
 ```shell
 cp .env_example .env
 ```
+Then edit the `.env` file to insert the credentials needed to connect to the
+database.
 
+> **Note** If you're using an Aiven for PostgreSQL service, then you want the
+**Service URI** value from the service **Overview** in the Aiven console.
+> The result should look something like:
+>
+>     PG_SERVICE_URI=postgres://<user>:<password>@<host>:<port>/defaultdb?sslmode=require
 
 Enable pgvector and set up the table we need in the database
 ```shell
