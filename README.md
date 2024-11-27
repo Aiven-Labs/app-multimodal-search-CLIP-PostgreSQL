@@ -3,11 +3,18 @@
 A Python web web app that searches for images matching a given text
 
 
+First, create a virtual environment to keep package installation local to this directory
 ```shell
 python3 -m venv venv
+```
+
+Enable it - this shows doing so for a normal Unix shell, there are other
+scripts for (for instance) the `fish` shell
+```shell
 source venv/bin/activate
 ```
 
+Install the Python packages we need
 ```shell
 python3 -m pip install -r requirements.txt
 ```
@@ -17,11 +24,11 @@ python3 -m pip install -r requirements.txt
 >     mkdir models
 >     curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output models/ViT-B-32.pt
 
+Copy the template environent file, and then edit the `.env` file to insert the credentials needed to connect to the database
 ```shell
 cp .env_example .env
 ```
 
-Edit the `.env` file to insert the credentials needed to connect to the database
 
 Enable pgvector and set up the table we need in the database
 ```shell
@@ -35,7 +42,7 @@ upload them to the database
 ```
 
 You can run `find_images.py` to check that everything is working - it looks
-for images matching `man jumping` and reports their filenames
+for images matching the text `man jumping` and reports their filenames
 ```shell
 ./find_images
 ```
