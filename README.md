@@ -1,10 +1,6 @@
 # An app for searching for images matching a text, using CLIP, PostgreSQL and pgvector
 
-A Python app that searches for images matching a given text
-
-
-
-> Note: the first iteration of this code uses OpenSearch - this will be fixed
+A Python web app that searches for images matching a given text
 
 
 ```shell
