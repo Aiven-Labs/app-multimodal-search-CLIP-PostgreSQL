@@ -5,6 +5,8 @@
 
 import os
 
+from pathlib import Path
+
 import clip
 import psycopg
 import torch
@@ -16,10 +18,18 @@ load_dotenv()
 SERVICE_URI = os.getenv("PG_SERVICE_URI")
 
 # Load the open CLIP model
-print('Loading CLIP model')
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f'Using {device}')
-model, preprocess = clip.load("ViT-B/32", device=device)
+# If we download it remotely, it will default to being cached in ~/.cache/clip
+LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
+MODEL_NAME = 'ViT-B/32'
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+if LOCAL_MODEL.exists():
+    print(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
+    print(f'Using {DEVICE}')
+    model, preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+else:
+    print(f'Importing CLIP model {MODEL_NAME}')
+    print(f'Using {DEVICE}')
+    model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
 
 index_name = "photos"  # Update with your index name
 
@@ -37,7 +47,7 @@ def compute_clip_features(photos_batch):
     photos = [Image.open(photo_file) for photo_file in photos_batch]
 
     # Preprocess all photos
-    photos_preprocessed = torch.stack([preprocess(photo) for photo in photos]).to(device)
+    photos_preprocessed = torch.stack([preprocess(photo) for photo in photos]).to(DEVICE)
 
     with torch.no_grad():
         # Encode the photos batch to compute the feature vectors and normalize them

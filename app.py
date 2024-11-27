@@ -12,6 +12,8 @@ import clip
 import psycopg
 import torch
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
@@ -36,16 +38,24 @@ load_dotenv()
 SERVICE_URI = os.getenv("PG_SERVICE_URI")
 
 # Load the open CLIP model
-logger.info('Importing CLIP model')
-device = "cuda" if torch.cuda.is_available() else "cpu"
-logger.info(f'Using {device}')
-model, preprocess = clip.load("ViT-B/32", device=device)
+# If we download it remotely, it will default to being cached in ~/.cache/clip
+LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
+MODEL_NAME = 'ViT-B/32'
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+if LOCAL_MODEL.exists():
+    logger.info(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
+    logger.info(f'Using {DEVICE}')
+    model, preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+else:
+    logger.info(f'Importing CLIP model {MODEL_NAME}')
+    logger.info(f'Using {DEVICE}')
+    model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
 
 
 def get_single_embedding(text):
     with torch.no_grad():
         # Encode the text to compute the feature vector and normalize it
-        text_input = clip.tokenize([text]).to(device)
+        text_input = clip.tokenize([text]).to(DEVICE)
         text_features = model.encode_text(text_input)
         text_features /= text_features.norm(dim=-1, keepdim=True)
 

@@ -1,6 +1,6 @@
 # An app for searching for images matching a text, using CLIP, PostgreSQL and pgvector
 
-A Python web app that searches for images matching a given text
+A Python web web app that searches for images matching a given text
 
 
 ```shell
@@ -12,6 +12,10 @@ source venv/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
+> ![TIP] NSometimes we've seen `clip.load` function fail to download the CLIP model, presumably due to the source server being busy. The code here will use a local copy of the model if it's available. To make that local copy:
+>
+>     mkdir models
+>     curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output models/ViT-B-32.pt
 
 ```shell
 cp .env_example .env
