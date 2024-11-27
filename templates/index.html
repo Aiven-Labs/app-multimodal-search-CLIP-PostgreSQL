@@ -1,0 +1,23 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastAPI + HTMX test</title>
+  <script src="https://unpkg.com/htmx.org@2.0.0" integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+</head>
+<body>
+
+<p>This is but a test</p>
+
+<form hx-post="/search_form/" hx-target="#response">
+	<input type="text" name="search_text" placeholder="{{ search_hint }}">
+  <button>Search</button>
+</form>
+
+<div id="response"><p>Nothing to see here yet</p></div>
+
+</body>
+</html>

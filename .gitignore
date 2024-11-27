@@ -31,3 +31,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# IPython
+.ipynb_checkpoints/

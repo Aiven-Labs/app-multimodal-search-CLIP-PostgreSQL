@@ -34,6 +34,12 @@ upload them to the database
 ./process_images
 ```
 
+You can run `find_images.py` to check that everything is working - it looks
+for images matching `man jumping` and reports their filenames
+```shell
+./find_images
+```
+
 Run the webapp locally using fastapi
 ```shell
 fastapi dev app.py
