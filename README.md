@@ -50,13 +50,13 @@ Enable pgvector and set up the table we need in the database
 Calculate the embeddings for the pictures in the `photos` directory, and
 upload them to the database
 ```shell
-./process_images
+./process_images.py
 ```
 
 You can run `find_images.py` to check that everything is working - it looks
 for images matching the text `man jumping` and reports their filenames
 ```shell
-./find_images
+./find_images.py
 ```
 
 Run the webapp locally using fastapi
