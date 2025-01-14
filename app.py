@@ -34,8 +34,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-SERVICE_URI = os.getenv("PG_SERVICE_URI")
+SERVICE_URI = os.getenv("DATABASE_URL")
+if not SERVICE_URI:
+    # Try the .env file
+    load_dotenv()
+    SERVICE_URI = os.getenv("DATABASE_URL")
+# At which point we rather hope we found the URL for our PG database...
 
 # Load the open CLIP model
 # If we download it remotely, it will default to being cached in ~/.cache/clip

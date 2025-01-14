@@ -14,8 +14,15 @@ import torch
 from dotenv import load_dotenv
 from PIL import Image
 
-load_dotenv()
-SERVICE_URI = os.getenv("PG_SERVICE_URI")
+
+SERVICE_URI = os.getenv("DATABASE_URL")
+if not SERVICE_URI:
+    # Try the .env file
+    load_dotenv()
+    SERVICE_URI = os.getenv("DATABASE_URL")
+if not SERVICE_URI:
+    import sys
+    sys.exit('No value found for environment variable DATABASE_URL (the PG database)')
 
 # Load the open CLIP model
 # If we download it remotely, it will default to being cached in ~/.cache/clip

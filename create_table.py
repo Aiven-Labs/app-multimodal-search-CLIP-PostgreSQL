@@ -8,8 +8,14 @@ import os
 import psycopg
 from dotenv import load_dotenv
 
-load_dotenv()
-SERVICE_URI = os.getenv("PG_SERVICE_URI")
+SERVICE_URI = os.getenv("DATABASE_URL")
+if not SERVICE_URI:
+    # Try the .env file
+    load_dotenv()
+    SERVICE_URI = os.getenv("DATABASE_URL")
+if not SERVICE_URI:
+    import sys
+    sys.exit('No value found for environment variable DATABASE_URL (the PG database)')
 
 try:
     with psycopg.connect(SERVICE_URI) as conn:

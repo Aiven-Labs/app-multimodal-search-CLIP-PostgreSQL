@@ -40,7 +40,7 @@ database.
 **Service URI** value from the service **Overview** in the Aiven console.
 > The result should look something like:
 >
->     PG_SERVICE_URI=postgres://<user>:<password>@<host>:<port>/defaultdb?sslmode=require
+>     DATABASE_URL=postgres://<user>:<password>@<host>:<port>/defaultdb?sslmode=require
 
 Enable pgvector and set up the table we need in the database
 ```shell
