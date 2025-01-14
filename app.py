@@ -24,7 +24,12 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 # Our images are kept locally, so make them available to the `img` tag
-app.mount("/photos", StaticFiles(directory="photos"), name="photos")
+#app.mount("/photos", StaticFiles(directory="photos"), name="photos")
+
+# Our images are in the GitHub repository, at
+# https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
+# (and yes, this should not be hard coded)
+PHOTOS_BASE = 'https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos'
 
 
 logging.basicConfig(
@@ -76,6 +81,7 @@ def vector_to_string(embedding):
 
 
 def search_for_matches(text):
+    """Returns pairs of the form (image_url, image_filename)"""
     logger.info(f'Searching for {text!r}')
     vector = get_single_embedding(text)
 
@@ -90,7 +96,7 @@ def search_for_matches(text):
                     (embedding_string,),
                 )
                 rows = cur.fetchall()
-                return [row[0] for row in rows]
+                return [(f'{PHOTOS_BASE}/{row[0]}', row[0]) for row in rows]
     except Exception as exc:
         print(f'{exc.__class__.__name__}: {exc}')
         return []

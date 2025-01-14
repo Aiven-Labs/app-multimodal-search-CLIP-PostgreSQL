@@ -2,7 +2,7 @@
 <div id="images">
 	{% for item in images %}
 	<p>Image {{ loop.index }}: {{ item }}</p>
-		<p><img src="{{ item }}" alt="Image {{ item }}"></p>
+		<p><img src="{{ item[0] }}" alt="Image {{ item[1] }}"></p>
 	{% else %}
 		<p>No results found</p>
 	{% endfor %}
