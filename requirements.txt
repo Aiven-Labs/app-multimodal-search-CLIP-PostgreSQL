@@ -4,9 +4,4 @@ jinja2
 psycopg[binary]
 python-dotenv
 git+https://github.com/openai/CLIP.git
-ftfy
-regex
-tqdm
-Pillow
 torch
-pandas
