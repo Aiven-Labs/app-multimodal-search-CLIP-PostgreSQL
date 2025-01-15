@@ -26,11 +26,6 @@ templates = Jinja2Templates(directory="templates")
 # Our images are kept locally, so make them available to the `img` tag
 #app.mount("/photos", StaticFiles(directory="photos"), name="photos")
 
-# Our images are in the GitHub repository, at
-# https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
-# (and yes, this should not be hard coded)
-PHOTOS_BASE = 'https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos'
-
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,7 +76,7 @@ def vector_to_string(embedding):
 
 
 def search_for_matches(text):
-    """Returns pairs of the form (image_url, image_filename)"""
+    """Returns pairs of the form (image_name, image_url)"""
     logger.info(f'Searching for {text!r}')
     vector = get_single_embedding(text)
 
@@ -92,16 +87,13 @@ def search_for_matches(text):
         with psycopg.connect(SERVICE_URI) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT * FROM pictures ORDER BY embedding <-> %s LIMIT 4;",
+                    "SELECT filename, url FROM pictures ORDER BY embedding <-> %s LIMIT 4;",
                     (embedding_string,),
                 )
-                rows = cur.fetchall()
-                return [(f'{PHOTOS_BASE}/{row[0]}', row[0]) for row in rows]
+                return cur.fetchall()
     except Exception as exc:
         print(f'{exc.__class__.__name__}: {exc}')
         return []
-
-
 
 
 
@@ -119,11 +111,11 @@ async def index(request: Request):
 @app.post("/search_form", response_class=HTMLResponse)
 async def search_form(request: Request, search_text: Annotated[str, Form()]):
     logging.info(f'Search form requests {search_text!r}')
-    images = search_for_matches(search_text)
+    results = search_for_matches(search_text)
     return templates.TemplateResponse(
         request=request,
         name="images.html",
         context={
-            "images": images,
+            "images": results,
         }
     )

@@ -45,6 +45,14 @@ index_name = "photos"  # Update with your index name
 # Path to the directory containing photos
 image_dir = "photos"
 
+# Our images are in the GitHub repository, at
+# https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
+# but the files there are, well, files, so won't work in an `img` tag. Instead we need
+# to refer to the raw content. This is OK for a demo, but should not be used in
+# production, as GitHub is not really intended for this purpose!
+# (and yes, this should not be hard coded, either)
+PHOTOS_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/refs/heads/main/photos/'
+
 # Batch size for processing images and indexing embeddings
 batch_size = 100
 
@@ -78,7 +86,7 @@ def index_embeddings_to_postgres(data):
     try:
         with psycopg.connect(SERVICE_URI) as conn:
             with conn.cursor() as cur:
-                with cur.copy('COPY pictures (filename, embedding) FROM STDIN') as copy:
+                with cur.copy('COPY pictures (filename, url, embedding) FROM STDIN') as copy:
                     for row in data:
                         copy.write_row(row)
     except Exception as exc:
@@ -102,14 +110,15 @@ image_files = os.listdir(image_dir)
 for i in range(0, len(image_files), batch_size):
     print(f'Batch {i}')
     batch_files = image_files[i:i+batch_size]
-    batch_file_paths = [os.path.join(image_dir, file) for file in batch_files]
+    batch_urls = [f'{PHOTOS_BASE}/{file}' for file in batch_files]
 
     # Compute embeddings for the batch of images
+    batch_file_paths = [os.path.join(image_dir, file) for file in batch_files]
     batch_embeddings = compute_clip_features(batch_file_paths)
 
     # Create data dictionary for indexing
-    for file_path, embedding in zip(batch_file_paths, batch_embeddings):
-        data.append((file_path, vector_to_string(embedding)))
+    for file_name, file_url, embedding in zip(batch_files, batch_urls, batch_embeddings):
+        data.append((file_name, file_url, vector_to_string(embedding)))
 
     # Check if we have enough data to index
     if len(data) >= batch_size:
