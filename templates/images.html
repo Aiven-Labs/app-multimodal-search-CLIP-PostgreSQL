@@ -1,10 +1,14 @@
 <!-- templates/images.html -->
 <div id="images">
-	{% for item in images %}
-	<p>Image {{ loop.index }}: {{ item[0] }}</p>
-		<p><img src="{{ item[1] }}" alt="Image {{ item[0] }}"></p>
+	{% if error_message %}
+		<p> {{ error_message }} </p>
 	{% else %}
-		<p>No results found</p>
-	{% endfor %}
+		{% for item in images %}
+		<p>Image {{ loop.index }}: {{ item[0] }}</p>
+			<p><img src="{{ item[1] }}" alt="Image {{ item[0] }}"></p>
+		{% else %}
+			<p>No results found</p>
+		{% endfor %}
+	{% endif %}
 </div>
 
