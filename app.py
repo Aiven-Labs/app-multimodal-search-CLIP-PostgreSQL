@@ -3,6 +3,7 @@
 """An app to find (the first four) images matching a text string, and display them.
 """
 
+import asyncio
 import logging
 import os
 
@@ -59,7 +60,7 @@ class Model:
     preprocess: Union[None, Callable[[PIL.Image], torch.Tensor]]
     error_string: str
 
-clip_model = Model(None, None, "")
+clip_model = Model(None, None, "CLIP model not loaded yet - try again soon")
 
 
 def load_clip_model():
@@ -87,7 +88,10 @@ async def lifespan(app: FastAPI):
 
     This means we'll get the CLIP model loaded before the app appears for the user
     """
-    load_clip_model()
+    logger.info('Async load task starting')
+    blocking_loader = asyncio.to_thread(load_clip_model)
+    asyncio.create_task(blocking_loader)
+    ###load_clip_model()
     yield
     # We don't have an unload step
 
