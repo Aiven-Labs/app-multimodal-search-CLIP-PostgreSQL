@@ -87,8 +87,7 @@ async def lifespan(app: FastAPI):
 
     This means we'll get the CLIP model loaded before the app appears for the user
     """
-    ### Temporarily don't load the CLIP model
-    ###load_clip_model()
+    load_clip_model()
     yield
     # We don't have an unload step
 
