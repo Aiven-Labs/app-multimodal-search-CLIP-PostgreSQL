@@ -86,7 +86,8 @@ def load_clip_model():
 async def lifespan(app: FastAPI):
     """Define events at the start and end of the app lifespan
 
-    This means we'll get the CLIP model loaded before the app appears for the user
+    This means we'll start the CLIP model loaded before the app appears for the user,
+    but won't block them from seeing the web page early.
     """
     logger.info('Async load task starting')
     blocking_loader = asyncio.to_thread(load_clip_model)
