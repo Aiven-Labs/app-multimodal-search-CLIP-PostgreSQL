@@ -12,7 +12,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+#from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 
 logging.basicConfig(
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI(redirect_slashes=False)
-app.add_middleware(HTTPSRedirectMiddleware)
+#app.add_middleware(HTTPSRedirectMiddleware)
 
 templates = Jinja2Templates(directory="templates")
 
