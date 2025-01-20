@@ -7,6 +7,8 @@
   <title>FastAPI + HTMX test</title>
   <script src="https://unpkg.com/htmx.org@2.0.0" integrity="sha384-wS5l5IKJBvK6sPTKa2WZ1js3d947pvWXbPJ1OmWfEuxLgeHcEbjUUA5i9V5ZkpCw" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+  <!-- Upgrade http:// requests -> https:// -->
+  <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 </head>
 <body>
 
@@ -14,7 +16,7 @@
 
 <p>{{ clip_model_status }}</p>
 
-<form hx-post="/search_form/" hx-target="#response">
+<form hx-post="/search_form" hx-target="#response">
 	<input type="text" name="search_text" placeholder="{{ search_hint }}">
   <button>Search</button>
 </form>
