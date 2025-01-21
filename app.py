@@ -24,10 +24,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Our images are kept locally, so make them available to the `img` tag
-#app.mount("/photos", StaticFiles(directory="photos"), name="photos")
-
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(name)s %(levelname)s: %(message)s',
