@@ -1,10 +1,16 @@
-FROM python:3.11
+FROM python:3.11-slim
 
 WORKDIR /app
 
 COPY ./requirements.txt /app
 
-RUN pip install -r requirements.txt
+# We need git to get the CLIP library, and 'slim' doesn't include it
+RUN apt-get update \
+&& apt-get install -y --no-install-recommends git \
+&& apt-get purge -y --auto-remove \
+&& rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 COPY ./app.py /app
 
