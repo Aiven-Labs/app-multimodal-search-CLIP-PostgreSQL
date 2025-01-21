@@ -137,7 +137,7 @@ def search_for_matches(text):
         return []
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 templates = Jinja2Templates(directory="templates")
 
 
