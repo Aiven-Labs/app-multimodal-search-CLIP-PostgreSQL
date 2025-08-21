@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-SERVICE_URI = os.getenv("PG_SERVICE_URI")
+SERVICE_URI = os.getenv("DATABASE_URL")
 
 
 # Load the open CLIP model
