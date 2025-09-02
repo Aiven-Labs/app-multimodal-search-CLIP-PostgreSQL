@@ -1,0 +1,22 @@
+# Build PDFs from my .typ (Typst) files
+#
+# Requirements:
+# * Typst, see [the installation
+#   instructions](https://github.com/typst/typst?tab=readme-ov-file#installation)
+# * Libertinus fonts, from https://github.com/alerque/libertinus
+
+# Make PDF files for slides
+pdf: slides
+
+# Make PDF files for slides and open them (Mac only)
+slides:
+  typst compile -f pdf slides.typ
+  open slides.pdf
+
+# Delete the generated PDF files
+clean:
+  rm -f slides.pdf
+
+# An alias for `just --list`
+help:
+  just --list
