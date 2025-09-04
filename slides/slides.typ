@@ -122,6 +122,153 @@
 
 #slide[
 
+== Possible agenda
+
+- If we have the app, show the QR code and let people play
+- Brief introduction to LMM / vector embeddings
+  - Kings / queens and old school text _maybe_
+  - RGB axes - can I show two different colours in "3d" as vectors?
+  - Olena's grid of emojis
+- Brief introduction to multimodal stuff (magic!)
+- Digression on OpenAI CLIP and choosing which implementation to use
+
+- Describe app structure / components
+  - We separate _preparing the database_ from _using the app_
+- Show the diagram of the 2 parts - writing embeddings to PG, asking for nearest images
+- Show SQL to setup PG
+- In _some_ order - either the order we use them, or perhaps text then image because people are used to text?
+  - Show code to create embedding for _image_
+  - Show code to create embedding for _text_
+- Show code to convert embedding to string suitable for SQL query
+- Show SQL query
+
+_Is there any other code that is notable enough to talk about, given time?_
+- If there's time, talk about lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
+- If there's time, maybe talk about "storing" the images on GitHub ("don't do that") so they're easy to display in HTML
+- If there's time, just _show_ the GET / POST methods - or at least their outline/docs
+
+- If we have the app, then _maybe_ show the Dockerfile and how to run the app
+- Fin
+]
+
+#slide[
+   // I don't want "Figure 1:" in the figure caption text
+   #show figure.caption: it => [
+     #it.body
+   ]
+
+   // And I want a smaller text size for the captions / diagram components
+   #set text(size: 20pt)
+
+   #diagram(
+
+    // The default spacing between rows and columns is 3em, which is a bit
+    // big for a slide, especially vertically with 3 rows
+    spacing: (1.2em, 0.3em),
+
+    // For debugging placement, it's useful to see the actual node
+    //node-fill: teal.lighten(50%),
+
+    // By default, nodes are rectangular or circular depending on their aspect
+    // ratio. I want more control than that, so will make all nodes rectangular
+    node-shape: rect,
+
+    // Let's have a bit more gap between a node and its edge(s)
+    node-outset: 5pt,
+
+    node( (0,0), name: <photos>,
+      figure(
+        image("images/unsplash-dog-photo.png", width: 5em),
+        caption: text(size: 20pt)[Photos from\ Unsplash],
+      ),
+    ),
+
+    node(
+      (2,0),
+      name: <clip-top>,
+      figure(
+        image("images/openai-clip.png", width: 3em),
+        caption: text(size: 18pt)[CLIP model\ from OpenAI],
+      ),
+    ),
+
+    node( (4,0), name: <vectors>, [Vectors in 512\ dimension space]),
+
+    node( (5,2), name: <postgres>,
+      grid(
+        columns: (auto, auto),
+        gutter: 0.5em,
+        image("images/elephant.png", width: 3em),
+        text(size: 20pt)[PostgreSQL],
+      )
+    ),
+
+    node( (0,4), name: <search>,
+      image("images/search-phrase.png", width: 8em)),
+
+    node( (2,4),  name: <clip-bottom>,
+      figure(
+        image("images/openai-clip.png", width: 3em),
+        caption: text(size: 18pt)[CLIP model\ from OpenAI],
+      ),
+    ),
+
+    node( (4,4),name: <single-vector>, [Single vector]),
+
+    edge(<photos>, "->", <clip-top>),
+    edge(<clip-top>, "->", <vectors>),
+    edge(<vectors>, "->", <postgres>),
+
+    edge(<search>, "->", <clip-bottom>),
+    edge(<clip-bottom>, "->", <single-vector>),
+    edge(<single-vector>, "->", <postgres>),
+  )
+]
+
+#slide[
+
+#import "@preview/cetz:0.4.1"
+#cetz.canvas(
+  length: 20pt,
+  background: luma(240),
+{
+  import cetz.draw: *
+  set-style(mark: (end: ">"))
+
+  line((0, 0, 0), (10, 0, 0), name: "blue", stroke: black)
+  line((0, 0, 0), (0, 10, 0), name: "red")
+  line((0, 0, 0), (0, 0, 10), name: "green")
+
+  content( (12,   0,   0), text(fill: red)[FF,0,0] )
+  content( (  0, 11,   0), text(fill: green)[0,FF,0] )
+  content( (  1,   0, 12), text(fill: blue)[0,0,FF] )
+
+  line((9, 0, 0), (9, 0, 7), mark: (end: none), stroke: green)
+  line((0, 0, 7), (9, 0, 7), mark: (end: none), stroke: green)
+
+  line((9, 0, 0), (9, 8, 0), mark: (end: none), stroke: green)
+  line((0, 8, 0), (9, 8, 0), mark: (end: none), stroke: green)
+
+  line((0, 0, 7), (0, 8, 7), mark: (end: none), stroke: green)
+  line((0, 8, 0), (0, 8, 7), mark: (end: none), stroke: green)
+
+  line((9, 8, 0), (9, 8, 7), mark: (end: none), stroke: green)
+  line((0, 8, 7), (9, 8, 7), mark: (end: none), stroke: green)
+  line((9, 0, 7), (9, 8, 7), mark: (end: none), stroke: green)
+
+  line((0, 0, 0), (9, 8, 7), stroke: (thickness: 5pt))
+
+  content( (0.5, -1, 7), [B3])
+  content( (-1, 8.5, 0), [CD])
+  content( (9.5, -1, 0), [E6])
+
+  content( (14,9.5,10), box(fill: rgb(90%, 80%, 70%), outset: 7pt, radius: 5pt )[E6,CD,B3])
+})
+
+]
+
+#slide[
+
   #grid(
     columns: (auto, auto, auto),
     align: horizon,
