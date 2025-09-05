@@ -523,7 +523,8 @@ _Is there any other code that is notable enough to talk about, given time?_
 // - python-dotenv to support taking environment variables from a .env file,
 //   or from the environment
 //
-// - If I was starting now, I'd use psycopg3, as it's nicer
+// - Note that `psycopg` is now `psycopg3`, which is a lot nicer than the
+//   older `psycopg2`
 // - There are various CLIP options we might choose - this is "the original"?
 //   - `git+https://github.com/openai/CLIP.git`
 // - We need Torch to handle ...
@@ -534,7 +535,7 @@ _Is there any other code that is notable enough to talk about, given time?_
 
   - `jinja2` to handle our HTML templating
 
-  - `psycopg[binary]` to talk to PostgreSQL
+  - `psycopg` to talk to PostgreSQL#super[®]
 
   - OpenAI `clip` to talk to the CLIP model
 
@@ -556,7 +557,7 @@ _Is there any other code that is notable enough to talk about, given time?_
 ]
 
 #slide[
-  == Packages / libraries
+  == CLIP libraries
 
   We are using https://github.com/openai/CLIP
 
@@ -578,11 +579,22 @@ _Is there any other code that is notable enough to talk about, given time?_
 ]
 
 #slide[
-  == Creating the PostgreSQL table
+  == Enable pgvector
+
+  Enable the #link("https://github.com/pgvector/pgvector")[pgvector]:
 
   ```sql
   CREATE EXTENSION vector;
   ```
+
+  This only works if the `pgvector` extension is installed.
+
+  It may already be available, as in Aiven for PostgreSQL#super[®]
+
+]
+
+#slide[
+  == Create our database table
 
   ```sql
   CREATE TABLE pictures (
@@ -590,6 +602,12 @@ _Is there any other code that is notable enough to talk about, given time?_
       url text,
       embedding vector(512));
   ```
+
+  - `filename` is the name of the image file
+  - `url` is the URL that we can use to show it in an `<img>` tag
+  - `embedding` is the vector for this image
+
+  CLIP uses vectors with 512 elements
 ]
 
 // For both text and image (so process_images.py and app.py)
@@ -653,19 +671,47 @@ _Is there any other code that is notable enough to talk about, given time?_
   ```
 ]
 
-// See https://www.psycopg.org/psycopg3/docs/basic/copy.html for more on
-// the use of COPY.
+// See https://www.postgresql.org/docs/current/sql-copy.html for COPY .. FROM STDIN
+// See https://www.psycopg.org/psycopg3/docs/basic/copy.html for how to use it in Python
 #slide[
   == Write data rows to PostgreSQL
   ```python
   with psycopg.connect(SERVICE_URI) as conn:
-      with conn.cursor() as cur:
-          with cur.copy(
-              'COPY pictures (filename, url, embedding)'
-              ' FROM STDIN') as copy:
+      with conn.cursor() as cursor:
+          with cursor.copy('COPY pictures'
+                           ' (filename, url, embedding)'
+                           ' FROM STDIN') as copy:
               for row in data:
                   copy.write_row(row)
   ```
+]
+
+#slide[
+
+  == That SQL query
+
+  Copy data to the table (`pictures`) from the client (`STDIN`)
+  ```sql
+  COPY pictures (filename, url, embedding) FROM STDIN;
+  ```
+  This is one of the most efficient ways to load data into the database.
+
+  See https://www.postgresql.org/docs/current/sql-copy.html for more
+]
+
+#slide[
+
+  == SQL COPY context manager
+
+  `psycopg` provides a context manager to help with this:
+  ```python
+  with cursor.copy('COPY pictures (filename, url,'
+                   ' embedding) FROM STDIN') as copy:
+      for row in data:
+          copy.write_row(row)
+  ```
+
+  See https://www.psycopg.org/psycopg3/docs/basic/copy.html for more
 ]
 
 #slide[
@@ -734,7 +780,19 @@ _Is there any other code that is notable enough to talk about, given time?_
 ]
 
 #slide[
-  - Show SQL query
+  == That SQL query
+
+  ```sql
+  SELECT filename, url FROM pictures
+      ORDER BY embedding <-> [0.3816255331, ..., 0.200309]
+      LIMIT 4;
+  ```
+
+  - `<->` for the nearest results by L2 (euclidean) distance.
+  - `<=>` for cosine similarity - it compares the angle/direction
+  - `<#>` for the inner product - do the vectors point the same way
+  - `<+>` for the L1 ("Manhattan" or "taxi cab") distance
+
 ]
 
 #slide[
