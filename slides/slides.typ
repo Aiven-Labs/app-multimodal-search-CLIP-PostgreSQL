@@ -2,8 +2,8 @@
 #import "@preview/polylux:0.4.0": *
 
 // Fletcher for diagrams
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
-#import fletcher.shapes: pill, chevron
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
+#import fletcher.shapes: chevron, pill
 
 // Make the paper dimensions fit for a presentation and the text larger
 #set page(paper: "presentation-16-9")
@@ -22,14 +22,14 @@
 #set text(font: "Libertinus Sans")
 
 #show heading.where(
-  level: 1
+  level: 1,
 ): it => text(
   font: "Libertinus Serif",
   it.body,
 )
 
 #show heading.where(
-  level: 2
+  level: 2,
 ): it => text(
   font: "Libertinus Serif",
   it.body,
@@ -43,8 +43,8 @@
 #show link: set text(blue)
 
 // Footer
-#let slide-footer = context[
-  #set text(size: 15pt, fill:gray)
+#let slide-footer = context [
+  #set text(size: 15pt, fill: gray)
   #toolbox.side-by-side[
     #align(left)[#toolbox.slide-number / #toolbox.last-slide-number]
   ][
@@ -60,14 +60,15 @@
 // parameter, at https://typst.app/docs/reference/model/quote/
 #show quote.where(block: false): it => {
   ["] + h(0pt, weak: true) + it.body + h(0pt, weak: true) + ["]
-  if it.attribution != none [ -- #text(size:20pt)[#it.attribution]]
+  if it.attribution != none [ -- #text(size: 20pt)[#it.attribution]]
 }
 
-// Give a very light grey background to code blocks
+// Give a very light grey background to code blocks, and make them all the same width
 #show raw.where(block: true): it => block(
   fill: luma(240),
+  width: 35em,
   inset: 5pt,
-  it
+  it,
 )
 
 // But be more subtle with inline code
@@ -77,6 +78,10 @@
   outset: (y: 3pt),
 )
 
+// I don't want "Figure 1:" in the figure caption text
+#show figure.caption: it => [
+  #it.body
+]
 
 // Use #slide to create a slide and style it using your favourite Typst functions
 #slide[
@@ -86,7 +91,7 @@
 
   #heading(
     level: 1,
-    [Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector]
+    [Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector],
   )
 
   #v(20pt)
@@ -103,209 +108,257 @@
       Slides available at https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides
     ],
 
-    align(right,
-      grid(
-        rows: (auto, auto),
-        align: center,
-        row-gutter: 10.0pt,
-        tiaoma.qrcode("https://aiven.io/tibs", options: (scale: 3.0)),
-        text(size: 20pt)[https://aiven.io/tibs]
-      )
-    )
+    align(right, grid(
+      rows: (auto, auto),
+      align: center,
+      row-gutter: 10.0pt,
+      tiaoma.qrcode("https://aiven.io/tibs", options: (scale: 3.0)),
+      text(size: 20pt)[https://aiven.io/tibs],
+    )),
   )
 ]
 
 #slide[
-  == Let's get started...
+  == What we're about
 
+  #align(center)[_A picture of the app finding "cute dog"_]
+
+  #align(center)[_If we have the app, show the QR code and let people play_]
 ]
 
+/*
 #slide[
-
 == Possible agenda
 
 - If we have the app, show the QR code and let people play
 - Brief introduction to LMM / vector embeddings
-  - Kings / queens and old school text _maybe_
-  - RGB axes - can I show two different colours in "3d" as vectors?
-  - Olena's grid of emojis
-- Brief introduction to multimodal stuff (magic!)
-- Digression on OpenAI CLIP and choosing which implementation to use
+  - Brief introduction to multimodal stuff (magic!)
+  - Digression on OpenAI CLIP and choosing which implementation to use
 
 - Describe app structure / components
   - We separate _preparing the database_ from _using the app_
-- Show the diagram of the 2 parts - writing embeddings to PG, asking for nearest images
-- Show SQL to setup PG
-- In _some_ order - either the order we use them, or perhaps text then image because people are used to text?
-  - Show code to create embedding for _image_
-  - Show code to create embedding for _text_
-- Show code to convert embedding to string suitable for SQL query
-- Show SQL query
+  - Explain some core code components
 
 _Is there any other code that is notable enough to talk about, given time?_
-- If there's time, talk about lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
-- If there's time, maybe talk about "storing" the images on GitHub ("don't do that") so they're easy to display in HTML
-- If there's time, just _show_ the GET / POST methods - or at least their outline/docs
+  - Lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
+  - "Storing" the images on GitHub ("don't do that") so they're easy to display in HTML
+  - _Show_ the GET / POST methods - or at least their outline/docs
 
 - If we have the app, then _maybe_ show the Dockerfile and how to run the app
-- Fin
+]
+*/
+
+#slide[
+  == Possible agenda
+
+  - Brief introduction to LMM / vector embeddings
+  - Describe app structure / components
+
+  _Is there any other code that is notable enough to talk about, given time?_
+
+  - If we have the app, then _maybe_ show the Dockerfile and how to run the app
 ]
 
 #slide[
-   // I don't want "Figure 1:" in the figure caption text
-   #show figure.caption: it => [
-     #it.body
-   ]
+  == Brief introduction to LMM / vector embeddings
+]
 
-   // And I want a smaller text size for the captions / diagram components
-   #set text(size: 20pt)
+// I like this slide - can I keep this slide? Even though I've used it before?
+#slide[
+  == ... not an explanation of ML
 
-   #diagram(
-
-    // The default spacing between rows and columns is 3em, which is a bit
-    // big for a slide, especially vertically with 3 rows
-    spacing: (1.2em, 0.3em),
-
-    // For debugging placement, it's useful to see the actual node
-    //node-fill: teal.lighten(50%),
-
-    // By default, nodes are rectangular or circular depending on their aspect
-    // ratio. I want more control than that, so will make all nodes rectangular
-    node-shape: rect,
-
-    // Let's have a bit more gap between a node and its edge(s)
-    node-outset: 5pt,
-
-    node( (0,0), name: <photos>,
-      figure(
-        image("images/unsplash-dog-photo.png", width: 5em),
-        caption: text(size: 20pt)[Photos from\ Unsplash],
-      ),
-    ),
-
-    node(
-      (2,0),
-      name: <clip-top>,
-      figure(
-        image("images/openai-clip.png", width: 3em),
-        caption: text(size: 18pt)[CLIP model\ from OpenAI],
-      ),
-    ),
-
-    node( (4,0), name: <vectors>, [Vectors in 512\ dimension space]),
-
-    node( (5,2), name: <postgres>,
-      grid(
-        columns: (auto, auto),
-        gutter: 0.5em,
-        image("images/elephant.png", width: 3em),
-        text(size: 20pt)[PostgreSQL],
-      )
-    ),
-
-    node( (0,4), name: <search>,
-      image("images/search-phrase.png", width: 8em)),
-
-    node( (2,4),  name: <clip-bottom>,
-      figure(
-        image("images/openai-clip.png", width: 3em),
-        caption: text(size: 18pt)[CLIP model\ from OpenAI],
-      ),
-    ),
-
-    node( (4,4),name: <single-vector>, [Single vector]),
-
-    edge(<photos>, "->", <clip-top>),
-    edge(<clip-top>, "->", <vectors>),
-    edge(<vectors>, "->", <postgres>),
-
-    edge(<search>, "->", <clip-bottom>),
-    edge(<clip-bottom>, "->", <single-vector>),
-    edge(<single-vector>, "->", <postgres>),
+  #figure(
+    image("images/markus-winkler-f57lx37DCM4-unsplash.jpg", width: 55%),
+    caption: text(size: 15pt)[
+      Photo by #link("https://unsplash.com/@markuswinkler")[Markus Winkler]
+      on #link("https://unsplash.com/photos/f57lx37DCM4")[Unsplash]
+    ],
   )
 ]
 
 #slide[
 
-#import "@preview/cetz:0.4.1"
-#cetz.canvas(
-  length: 20pt,
-  background: luma(240),
-{
-  import cetz.draw: *
-  set-style(mark: (end: ">"))
+  == Not an introduction to vectors and embeddings
 
-  line((0, 0, 0), (10, 0, 0), name: "blue", stroke: black)
-  line((0, 0, 0), (0, 10, 0), name: "red")
-  line((0, 0, 0), (0, 0, 10), name: "green")
+  ML people talk about vectors and embeddings and vector embeddings.
 
-  content( (12,   0,   0), text(fill: red)[FF,0,0] )
-  content( (  0, 11,   0), text(fill: green)[0,FF,0] )
-  content( (  1,   0, 12), text(fill: blue)[0,0,FF] )
+  - A vector is an array of numbers representing a direction and a size.
 
-  line((9, 0, 0), (9, 0, 7), mark: (end: none), stroke: green)
-  line((0, 0, 7), (9, 0, 7), mark: (end: none), stroke: green)
+  - "Embedding" means representing something in a computer.
 
-  line((9, 0, 0), (9, 8, 0), mark: (end: none), stroke: green)
-  line((0, 8, 0), (9, 8, 0), mark: (end: none), stroke: green)
+  So a *vector embedding* is
 
-  line((0, 0, 7), (0, 8, 7), mark: (end: none), stroke: green)
-  line((0, 8, 0), (0, 8, 7), mark: (end: none), stroke: green)
-
-  line((9, 8, 0), (9, 8, 7), mark: (end: none), stroke: green)
-  line((0, 8, 7), (9, 8, 7), mark: (end: none), stroke: green)
-  line((9, 0, 7), (9, 8, 7), mark: (end: none), stroke: green)
-
-  line((0, 0, 0), (9, 8, 7), stroke: (thickness: 5pt))
-
-  content( (0.5, -1, 7), [B3])
-  content( (-1, 8.5, 0), [CD])
-  content( (9.5, -1, 0), [E6])
-
-  content( (14,9.5,10), box(fill: rgb(90%, 80%, 70%), outset: 7pt, radius: 5pt )[E6,CD,B3])
-})
-
+  - an array of numbers representing a direction and size
+  - stored in a computer.
 ]
 
 #slide[
 
-  #grid(
-    columns: (auto, auto, auto),
-    align: horizon,
-    table(
-    align: right,
-      columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      rows:  (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      [0], [1], [2], [3], [4], [5],
-      [1], [👗], [ ], [ ], [ ], [🐶],
-      [2], [👠], [👟], [ ], [🐻], [ ],
-      [3], [💳], [💶], [ ], [ ], [ ],
-      [4], [ ], [ ], [ ], [ ], [ ],
-      [5], [ ], [ ], [ ], [ ], [🎸],
-    ),
-    grid.cell(inset: 0.5em, sym.arrow),
-    table(
-    align: right,
-      columns: (1.5em, 1.5em, 1.5em),
-      rows: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      [ ], [X], [Y],
-     [👗], [0], [0],
-     [👠], [0], [1],
-     [👟], [1], [1],
-     [🐶], [5], [0],
-     [🐻], [4], [1],
-     [💳], [0], [3],
-     [💶], [1], [3],
-     [🎸], [5], [5],
-    ),
-  )
+  == Not enough about vectors
 
+  Broadly, we can describe the characteristics of things with numbers.
+
+  For instance, we can describe colours with RGB values.
 ]
 
-// I really should create this slide using the data from the previous slide,
+// Do I want to show a second arrow, or a second diagram with two arrows
+// and the vector between them?
+#slide[
+  == RGB encoding as a 3d vector: `#e6cdb3`
+
+  #import "@preview/cetz:0.4.1"
+
+  #align(center)[
+    #cetz.canvas(
+      length: 15pt,
+      background: luma(240),
+      {
+        import cetz.draw: *
+        set-style(mark: (end: ">"))
+
+        line((0, 0, 0), (10, 0, 0), name: "blue", stroke: black)
+        line((0, 0, 0), (0, 10, 0), name: "red")
+        line((0, 0, 0), (0, 0, 10), name: "green")
+
+        content((12, 0, 0), text(fill: red)[FF,0,0])
+        content((0, 11, 0), text(fill: green)[0,FF,0])
+        content((1, 0, 12), text(fill: blue)[0,0,FF])
+
+        line((9, 0, 0), (9, 0, 7), mark: (end: none), stroke: green)
+        line((0, 0, 7), (9, 0, 7), mark: (end: none), stroke: green)
+
+        line((9, 0, 0), (9, 8, 0), mark: (end: none), stroke: green)
+        line((0, 8, 0), (9, 8, 0), mark: (end: none), stroke: green)
+
+        line((0, 0, 7), (0, 8, 7), mark: (end: none), stroke: green)
+        line((0, 8, 0), (0, 8, 7), mark: (end: none), stroke: green)
+
+        line((9, 8, 0), (9, 8, 7), mark: (end: none), stroke: green)
+        line((0, 8, 7), (9, 8, 7), mark: (end: none), stroke: green)
+        line((9, 0, 7), (9, 8, 7), mark: (end: none), stroke: green)
+
+        line((0, 0, 0), (9, 8, 7), stroke: (thickness: 5pt))
+
+        content((0.5, -1, 7), [B3])
+        content((-1, 8.5, 0), [CD])
+        content((9.5, -1, 0), [E6])
+
+        content((14, 9.5, 10), box(
+          fill: rgb(90%, 80%, 70%),
+          outset: 7pt,
+          radius: 5pt,
+        )[E6,CD,B3])
+      },
+    )
+  ]
+]
+
+#slide[
+
+  == We can do mathematics with vectors
+
+  We can compare their
+
+  - length
+  - direction
+
+  and we can do maths between vectors - for instance
+
+  Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
+  _similar to_
+  #highlight(fill: luma(230))[the vector between colour 3 and colour 4]?
+]
+
+#slide[
+  == How do we calculate the vectors?
+
+  Back in the early days of Natural Language Processing, this was done by hand.
+
+  Nowadays we use Machine Learning and especially Large Language Models.
+]
+
+#slide[
+
+  == Calculating the vectors by hand: early NLP
+
+  In early Natural Language Processing, words would be categorised by hand.
+
+  #align(center)[
+    #grid(
+      columns: (auto, auto, auto),
+      gutter: 10pt,
+      align: left,
+      [`king`], [#sym.arrow.r.stroked], [`[1.0, 1.0, 0.8, ...]`],
+      [`queen`], [#sym.arrow.r.stroked], [`[1.0, 0.0, 0.7, ...]`],
+      [`princess`], [#sym.arrow.r.stroked], [`[0.9, 0.0, 0.3, ...]`],
+    )
+  ]
+
+  gauging "importance", "gender", "typical age" and then other things
+
+  This doesn't scale well - but we do know what the "meanings" are, and we can
+  hope to spot bias
+]
+
+#slide[
+
+  == Calculating the vectors using ML
+
+  With ML, we can
+
+  - *train* a machine learning system
+  - to *"recognise"* that a thing belongs to particular categories.
+
+  And the "thing" can be more than just words
+
+  This is wonderful - but sometimes leads to surprising results, because we
+  don't know what the meanings *"chosen"* actually are
+]
+
+// Olena's grid of emojis
+#slide[
+  == Classifying emoji
+  #align(center)[
+    #grid(
+      columns: (auto, auto, auto),
+      align: horizon,
+      table(
+        align: right,
+        columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
+        rows: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
+        [ ], [0], [1], [2], [3], [4], [5],
+        [0], [👗], [ ], [ ], [ ], [ ], [🐶],
+        [1], [👠], [👟], [ ], [ ], [🐻], [ ],
+        [2], [ ], [ ], [ ], [ ], [ ], [ ],
+        [3], [💳], [💶], [ ], [ ], [ ], [ ],
+        [4], [ ], [ ], [ ], [ ], [ ], [ ],
+        [4], [ ], [ ], [ ], [ ], [ ], [🎸],
+      ),
+      grid.cell(inset: 0.5em, sym.arrow),
+      table(
+        align: right,
+        columns: (1.5em, 1.5em, 1.5em),
+        rows: (1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em),
+        [ ], [X], [Y],
+        [👗], [0], [0],
+        [👠], [0], [1],
+        [👟], [1], [1],
+        [🐶], [5], [0],
+        [🐻], [4], [1],
+        [💳], [0], [3],
+        [💶], [1], [3],
+        [🎸], [5], [5],
+      ),
+    )
+  ]
+]
+
+/*
+// Jay's extension of Olena's grid, with "Dimensions"
+// Is this a slide I can use / explain?
+
+// Also, I really should create this slide using the data from the previous slide,
 // rather than copying the whole thing!
-// On the other hand, an I convinced this is a slide *I* can use to explain
-// the concepts? Maybe not...
 #slide[
 
   #grid(
@@ -313,14 +366,15 @@ _Is there any other code that is notable enough to talk about, given time?_
     align: horizon,
     table(
     align: right,
-      columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      rows:  (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      [0], [1], [2], [3], [4], [5],
-      [1], [👗], [ ], [ ], [ ], [🐶],
-      [2], [👠], [👟], [ ], [🐻], [ ],
-      [3], [💳], [💶], [ ], [ ], [ ],
-      [4], [ ], [ ], [ ], [ ], [ ],
-      [5], [ ], [ ], [ ], [ ], [🎸],
+      columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
+      rows:  (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
+      [ ], [0], [1], [2], [3], [4], [5],
+      [0], [👗], [ ], [ ], [ ], [ ], [🐶],
+      [1], [👠], [👟], [ ], [ ], [🐻], [ ],
+      [2], [ ], [ ], [ ], [ ], [ ], [ ],
+      [3], [💳], [💶], [ ], [ ], [ ], [ ],
+      [4], [ ], [ ], [ ], [ ], [ ], [ ],
+      [4], [ ], [ ], [ ], [ ], [ ], [🎸],
     ),
     grid.cell(inset: 0.5em, sym.arrow),
     table(
@@ -353,22 +407,114 @@ _Is there any other code that is notable enough to talk about, given time?_
     )
     )
   )
+]
+*/
 
+#slide[
+  == Multimodal magic
+
+  *Modalities* -- kinds of data
+
+  Text, images, videos, audio, code, equations...
+
+  - Old: convert data in any modality to text, and then use a (text) LLM
+
+  - New: train on different kinds of data simultaneously,
+    relating them using "fusion mechanisms"
+
+  #sym.arrow.r.stroked "Large Multimodal Models"
 ]
 
 #slide[
-  == The PostgreSQL table
+  == Training CLIP: Contrastive pre-training
 
-```sql
-CREATE EXTENSION vector;
-```
+  #figure(
+    image("images/CLIP-training-overview-a.svg", width: 15em),
+    caption: text(size: 20pt)[source: https://github.com/openai/CLIP],
+  )
+]
 
-```sql
-CREATE TABLE pictures (
-    filename text PRIMARY KEY,
-    url text,
-    embedding vector(512));
-```
+// If I understand this correctly, this is actually doing the opposite of
+// what we're doing - it's taking an image and returning a corresponding text
+// or description
+#slide[
+  == Training CLIP: Create dataset classifier, predict...
+
+  #figure(
+    image("images/CLIP-training-overview-b.svg", width: 14em),
+    caption: text(size: 20pt)[source: https://github.com/openai/CLIP],
+  )
+]
+
+// Describe the overall flow of what we're doing
+#slide[
+  // And I want a smaller text size for the captions / diagram components
+  #set text(size: 20pt)
+
+  #diagram(
+    // The default spacing between rows and columns is 3em, which is a bit
+    // big for a slide, especially vertically with 3 rows
+    spacing: (1.2em, 0.3em),
+
+    // For debugging placement, it's useful to see the actual node
+    //node-fill: teal.lighten(50%),
+
+    // By default, nodes are rectangular or circular depending on their aspect
+    // ratio. I want more control than that, so will make all nodes rectangular
+    node-shape: rect,
+
+    // Let's have a bit more gap between a node and its edge(s)
+    node-outset: 5pt,
+
+    node((0, 0), name: <photos>, figure(
+      image("images/unsplash-dog-photo.png", width: 5em),
+      caption: text(size: 20pt)[Photos from\ Unsplash],
+    )),
+
+    node(
+      (2, 0),
+      name: <clip-top>,
+      figure(
+        image("images/openai-clip.png", width: 3em),
+        caption: text(size: 18pt)[CLIP model\ from OpenAI],
+      ),
+    ),
+
+    node((4, 0), name: <vectors>, [Vectors in 512\ dimension space]),
+
+    node((5, 2), name: <postgres>, grid(
+      columns: (auto, auto),
+      gutter: 0.5em,
+      image("images/elephant.png", width: 3em), text(size: 20pt)[PostgreSQL],
+    )),
+
+    node((0, 4), name: <search>, image("images/search-phrase.png", width: 8em)),
+
+    node((2, 4), name: <clip-bottom>, figure(
+      image("images/openai-clip.png", width: 3em),
+      caption: text(size: 18pt)[CLIP model\ from OpenAI],
+    )),
+
+    node((4, 4), name: <single-vector>, [Single vector]),
+
+    edge(<photos>, "->", <clip-top>),
+    edge(<clip-top>, "->", <vectors>),
+    edge(<vectors>, "->", <postgres>),
+
+    edge(<search>, "->", <clip-bottom>),
+    edge(<clip-bottom>, "->", <single-vector>),
+    edge(<single-vector>, "->", <postgres>),
+  )
+]
+
+#slide[
+  == Describe app structure / components
+  - We separate _preparing the database_ from _using the app_
+
+  - `create_table.py`
+  - `process_images.py`
+  - `find_images.py` -- for testing
+  - `app.py` -- the thing itself
 ]
 
 // - typing to make our code better
@@ -376,270 +522,253 @@ CREATE TABLE pictures (
 // - jinja2 to allow us to create our HTML page template
 // - python-dotenv to support taking environment variables from a .env file,
 //   or from the environment
-// Why "fastapi[standard]"? - it's what the fastapi installation guide says to use :)
-#slide[
-== Python packages we use (1)
-
-Making the app work
-- `typing`
-- `fastapi[standard]`
-- `jinja2`
-- `python-dotenv`
-]
-
+//
 // - If I was starting now, I'd use psycopg3, as it's nicer
 // - There are various CLIP options we might choose - this is "the original"?
+//   - `git+https://github.com/openai/CLIP.git`
 // - We need Torch to handle ...
 #slide[
-== Python packages we use (2)
+  == The program requirements
 
-Talking to PostgreSQL
-- `psycopg[binary]`
+  - `fastapi` for our web app
 
-The LLM bit
-- `git+https://github.com/openai/CLIP.git`
-- `torch`
-]
+  - `jinja2` to handle our HTML templating
 
-// ==========================================================
-// And now, too much code for one talk!!!
-// ==========================================================
+  - `psycopg[binary]` to talk to PostgreSQL
 
-#slide[
-  == And now, too much code for one talk
+  - OpenAI `clip` to talk to the CLIP model
 
-  ...get it in now, and remove it later as it's not needed...
+  - `torch` to handle some ML related computations // try to explain this better
 ]
 
 #slide[
-  == Populating the PostgreSQL tables
+  == OpenAI CLIP
 
-- Run a program
-- `process_images.py`
+  https://github.com/openai/CLIP and https://openai.com/index/clip/
+
+  #quote(block: true)[
+    OpenAI's CLIP (Contrastive Language-Image Pre-training) is a neural network that is
+    trained to understand images paired with natural language.]
+
+  - highly efficient
+  - flexible and general
+  - carefully limited in its ambitions (don't ask it to count things!)
 ]
 
 #slide[
-== The `dotenv` dance
-```python
-SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
-    load_dotenv()
-    SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
-    import sys
-    sys.exit('No value found for environment variable'
-             ' DATABASE_URL (the PG database)')
-```
+  == Packages / libraries
+
+  We are using https://github.com/openai/CLIP
+
+  ```shell
+  pip install git+https://github.com/openai/CLIP.git
+  ```
+
+  OpenAI also suggest:
+
+  - #link("https://github.com/mlfoundations/open_clip")[OpenCLIP]:
+    includes larger and independently trained CLIP models up to ViT-G/14
+  - #link("https://huggingface.co/docs/transformers/model_doc/clip")[Hugging Face
+    implementation of CLIP]: for easier integration with the HF ecosystem
+
 ]
 
 #slide[
-== Load the open CLIP model
-```python
-MODEL_NAME = 'ViT-B/32'
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
-```
-]
-
-// If we download it remotely, it will default to being cached in ~/.cache/clip
-#slide[
-== Load the open CLIP model (actually)
-```python
-MODEL_NAME = 'ViT-B/32'
-LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-
-if LOCAL_MODEL.exists():
-    model, preprocess = clip.load(
-        MODEL_NAME, device=DEVICE,
-        download_root=LOCAL_MODEL.parent)
-else:
-    model, preprocess = clip.load(
-        MODEL_NAME, device=DEVICE)
-```
-]
-
-// Our images are in the GitHub repository, at
-// https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
-// but the files there are, well, files, so won't work in an `img` tag. Instead we need
-// to refer to the raw content. This is OK for a demo, but should not be used in
-// production, as GitHub is not really intended for this purpose!
-// (and yes, this should not be hard coded, either)
-#slide[
-== Some constants
-```python
-index_name = "photos"  # Index name in PostgreSQL
-image_dir = "photos"   # Path to the photos directory
-
-PHOTOS_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/refs/heads/main/photos/'
-
-# Batch size for processing images and indexing embeddings
-batch_size = 100
-```
+  == Let's talk about code
 ]
 
 #slide[
-== Compute features (1)
-```python
-def compute_clip_features(photos_batch):
-    photos = [Image.open(photo_file)
-        for photo_file in photos_batch]
+  == Creating the PostgreSQL table
 
-    photos_preprocessed = torch.stack(
-        [preprocess(photo) for photo in photos]).to(DEVICE)
-```
+  ```sql
+  CREATE EXTENSION vector;
+  ```
+
+  ```sql
+  CREATE TABLE pictures (
+      filename text PRIMARY KEY,
+      url text,
+      embedding vector(512));
+  ```
+]
+
+// For both text and image (so process_images.py and app.py)
+#slide[
+  == Load the open CLIP model
+  ```python
+  MODEL_NAME = 'ViT-B/32'
+  DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+  model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
+  ```
+]
+
+// But actually we don't really *want* to let the CLIP package
+// lazily download the model, as that makes the first query very slow
+// (and may fail). So we allow for the model to have been downloaded
+// beforehand.
+//
+// (Note: If we let `clip` download it, it will default to being cached in ~/.cache/clip)
+#slide[
+  == Load the open CLIP model (actually)
+  ```python
+  MODEL_NAME = 'ViT-B/32'
+  LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
+
+  if LOCAL_MODEL.exists():
+      model, preprocess = clip.load(
+          MODEL_NAME, device=DEVICE,
+          download_root=LOCAL_MODEL.parent)
+  else:
+      model, preprocess = clip.load(
+          MODEL_NAME, device=DEVICE)
+  ```
 ]
 
 #slide[
-== Compute features (2)
+  == Process a batch of photos (1)
+  ```python
+  photos = [Image.open(photo_file)
+              for photo_file in photos_batch]
 
-```python
-    with torch.no_grad():
-        photos_features = model.encode_image(
-            photos_preprocessed)
-        photos_features /= photos_features.norm(
-            dim=-1, keepdim=True)
+  photos_preprocessed = torch.stack(
+      [preprocess(photo) for photo in photos]).to(DEVICE)
+  ```
+]
 
-    return photos_features.cpu().numpy()
-```
+#slide[
+  == Process a batch of photos (2)
+
+  ```python
+  with torch.no_grad():
+      photos_features = model.encode_image(
+          photos_preprocessed
+      )
+      photos_features /= photos_features.norm(
+          dim=-1,
+          keepdim=True
+      )
+
+  return photos_features.cpu().numpy()
+  ```
 ]
 
 // See https://www.psycopg.org/psycopg3/docs/basic/copy.html for more on
 // the use of COPY.
 #slide[
-== Writing data rows to PostgreSQL
-```python
-with psycopg.connect(SERVICE_URI) as conn:
-    with conn.cursor() as cur:
-        with cur.copy(
-            'COPY pictures (filename, url, embedding)'
-            ' FROM STDIN') as copy:
-            for row in data:
-                copy.write_row(row)
-```
+  == Write data rows to PostgreSQL
+  ```python
+  with psycopg.connect(SERVICE_URI) as conn:
+      with conn.cursor() as cur:
+          with cur.copy(
+              'COPY pictures (filename, url, embedding)'
+              ' FROM STDIN') as copy:
+              for row in data:
+                  copy.write_row(row)
+  ```
 ]
 
 #slide[
-== Convert our embedding vector into an SQL string
-```python
-def vector_to_string(embedding):
-    vector_str = ", ".join(
-        str(x) for x in embedding.tolist()
-    )
-    vector_str = f'[{vector_str}]'
-    return vector_str
-```
+  == Convert an embedding vector into an SQL string
+  ```python
+  def vector_to_string(embedding):
+      vector_str = ", ".join(
+          str(x) for x in embedding.tolist()
+      )
+      vector_str = f'[{vector_str}]'
+      return vector_str
+  ```
 ]
 
 #slide[
-== Process images in batches (1)
-```python
-# Iterate over images and process them in batches
-data = []
-image_files = os.listdir(image_dir)
-for i in range(0, len(image_files), batch_size):
-    print(f'Batch {i}')
-    batch_files = image_files[i:i+batch_size]
-    batch_urls = [f'{PHOTOS_BASE}/{file}'
-                      for file in batch_files]
-```
+  - In _some_ order - either the order we use them, or perhaps text then image because people are used to text?
+    - Show code to create embedding for _text_
 ]
 
 #slide[
-== Process images in batches (2)
+  - Show code to convert embedding to string suitable for SQL query
+]
 
-Compute embeddings for the batch of images and create data dictionary for indexing
-```python
-    batch_embeddings = compute_clip_features(
-        batch_file_paths)
+// Encode the text to compute the feature vector and normalize it
+// This is _very similar_ to what we do for the images
+#slide[
+  ```python
+  def get_single_embedding(text):
+      with torch.no_grad():
+          text_input = clip.tokenize([text]).to(DEVICE)
+          text_features = \
+               clip_model.model.encode_text(text_input)
+          text_features /= \
+               text_features.norm(dim=-1, keepdim=True)
 
-    for file_name, file_url, embedding \
-      in zip(batch_files, batch_urls, batch_embeddings):
-        data.append((file_name, file_url,
-                     vector_to_string(embedding)))
-```
+      # Return the feature vector
+      return text_features.cpu().numpy()[0]
+  ```
 ]
 
 #slide[
-== Process images in batches (3)
+  ```python
+  def search_for_matches(text):
+      """Returns pairs of the form (image_name, image_url)"""
+      logger.info(f'Searching for {text!r}')
+      vector = get_single_embedding(text)
 
-```python
-    # Check if we have enough data to index
-    if len(data) >= batch_size:
-        index_embeddings_to_postgres(data)
-        data = []
-
-# Don't forget: Index any remaining data
-if len(data) > 0:
-    index_embeddings_to_postgres(data)
-```
+      embedding_string = vector_to_string(vector)
+  ```
 ]
 
-
+// I've left out error handling - if an exception occurs,
+// it will return (None, None)
 #slide[
-  == The application
-
-  _Some_ of which is very similar to what we saw already
-]
-
-#slide[
-== Some lovely imports
-```python
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from pathlib import Path
-```
+  ```python
+      # Perform search
+      with psycopg.connect(SERVICE_URI) as conn:
+          with conn.cursor() as cur:
+              cur.execute(
+                  "SELECT filename, url FROM pictures"
+                  " ORDER BY embedding <-> %s LIMIT 4;",
+                  (embedding_string,),
+              )
+              return cur.fetchall()
+  ```
 ]
 
 #slide[
-== Fastapi stuff
-```python
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-```
+  - Show SQL query
 ]
 
 #slide[
-== Logging is good
 
-Your web app _really_ wants logging
-```python
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(name)s %(levelname)s:'
-           ' %(message)s',
-)
-
-logger = logging.getLogger(__name__)
-```
+  _Is there any other code that is notable enough to talk about, given time?_
 ]
 
-// Why didn't I just use DATABASE_URL as the constant? I don't remember...
-// Shouldn't we have some error checking in case that constant ends up unset?
-// (yes, yes we should)
+// ==================================================================
+
 #slide[
-== Where's that database?
-```python
-SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
-    # Try the .env file
-    load_dotenv()
-    SERVICE_URI = os.getenv("DATABASE_URL")
-# At which point we rather hope we found the database URL
-```
+  == If there's time, talk about lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
+
+  MAYBE MAYBE MAYBE
+]
+
+// For both text and image (so process_images.py and app.py)
+#slide[
+  == Load the open CLIP model - we saw this earlier
+  ```python
+  MODEL_NAME = 'ViT-B/32' ww
+  DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+  model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
+  ```
 ]
 
 #slide[
-== This is familiar
-```python
-LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-MODEL_NAME = 'ViT-B/32'
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-```
-
-...but we delegate _loading_ the model to a function
+  == This is familiar
+  ```python
+  LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
+  MODEL_NAME = 'ViT-B/32'
+  DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+  ```
+  ...but we delegate _loading_ the model to a function
 ]
 
 // The types of the values are found from the docstring for clip.load
@@ -648,34 +777,37 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 //
 // (we could just make them type Any, but it's interesting to know the actual types)
 #slide[
-== Let's define our Model, ready for lazy-loading
-```python
-@dataclass
-class Model:
-    model: Union[None, torch.nn.Module]
-    preprocess: Union[None,
-                      Callable[[PIL.Image], torch.Tensor]]
-    error_string: str
+  == Let's define our Model, ready for lazy-loading
+  ```python
+  @dataclass
+  class Model:
+      model: Union[None, torch.nn.Module]
+      preprocess: Union[None,
+                        Callable[[PIL.Image], torch.Tensor]]
+      error_string: str
 
-clip_model = Model(
-    None, None,
-    "CLIP model not loaded yet - try again soon")
-```
+  clip_model = Model(
+      None, None,
+      "CLIP model not loaded yet - try again soon")
+  ```
 ]
 
-// And the function that does the loading
+// And the function that does the loading.
+// I've left out error handling - naughty me - but it basically raises an
+// logs the exception and sets `clip_model.error_string` to a message saying
+// "Unable to load CLIP model - please restart the application"
 #slide[
-```python
-def load_clip_model():
-    try:
-        # The same code we saw earlier
-    except Exception as exc:
-        clip_model.error_string = 'Unable to load '
-            'CLIP model - please restart the application'
-        logger.exception(clip_model.error_string)
-    else:
-        logger.info('CLIP model imported')
-```
+  ```python
+  def load_clip_model():
+      if LOCAL_MODEL.exists():
+          logger.info(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
+          logger.info(f'Using {DEVICE}')
+          clip_model.model, clip_model.preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+      else:
+          logger.info(f'Importing CLIP model {MODEL_NAME}')
+          logger.info(f'Using {DEVICE}')
+          clip_model.model, clip_model.preprocess = clip.load(MODEL_NAME, device=DEVICE)
+  ```
 ]
 
 // Define events at the start and end of the app lifespan
@@ -686,128 +818,81 @@ def load_clip_model():
 // And we needed the Model structure so that we could know when the async
 // model loading had finished
 #slide[
-```python
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info('Async load task starting')
+  ```python
+  @asynccontextmanager
+  async def lifespan(app: FastAPI):
+      logger.info('Async load task starting')
 
-    blocking_loader = asyncio.to_thread(load_clip_model)
-    asyncio.create_task(blocking_loader)
+      blocking_loader = asyncio.to_thread(load_clip_model)
+      asyncio.create_task(blocking_loader)
 
-    yield
+      yield
 
-    # We don't have an unload step
-```
-]
-
-// Encode the text to compute the feature vector and normalize it
-// This is _very similar_ to what we do for the images
-#slide[
-```python
-def get_single_embedding(text):
-    with torch.no_grad():
-        text_input = clip.tokenize([text]).to(DEVICE)
-        text_features = \
-             clip_model.model.encode_text(text_input)
-        text_features /= \
-             text_features.norm(dim=-1, keepdim=True)
-
-    # Return the feature vector
-    return text_features.cpu().numpy()[0]
-```
+      # We don't have an unload step
+  ```
 ]
 
 #slide[
-```python
-def search_for_matches(text):
-    """Returns pairs of the form (image_name, image_url)"""
-    logger.info(f'Searching for {text!r}')
-    vector = get_single_embedding(text)
-
-    embedding_string = vector_to_string(vector)
-```
+  == Join things up...
+  ```python
+  app = FastAPI(lifespan=lifespan, redirect_slashes=False)
+  ```
 ]
 
-// I've left out error handling - if an exception occurs,
-// it will return (None, None)
-#slide[
-```python
-    # Perform search
-    with psycopg.connect(SERVICE_URI) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT filename, url FROM pictures"
-                " ORDER BY embedding <-> %s LIMIT 4;",
-                (embedding_string,),
-            )
-            return cur.fetchall()
-```
-]
+
+// ==================================================================
 
 #slide[
-== Make the app work
-```python
-app = FastAPI(lifespan=lifespan, redirect_slashes=False)
-templates = Jinja2Templates(directory="templates")
-```
+  - If there's time, maybe talk about "storing" the images on GitHub ("don't do that") so they're easy to display in HTML
+
+  The images in the photos directory came from Unsplash and have been reduced in size to make them fit within GitHub filesize limits for a repository.
+
+  Note When the app is running, it retrieves the images for the HTML page directly from this GitHub repository. This is not good practice for a production app, as GitHub is not intended to act as an image repository for web apps.
+
+
 ]
+
+// ==================================================================
 
 #slide[
-== Our GET method
-```python
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "search_hint": "Find images like...",
-        },
-    )
-```
+  - If there's time, just _show_ the GET / POST methods - or at least their outline/docs
 ]
+
+// ==================================================================
 
 #slide[
-== Our POST method (1)
-```python
-@app.post("/search_form", response_class=HTMLResponse)
-async def search_form(
-    request: Request,
-    search_text: Annotated[str, Form()]):
+  == Dockerfile
+  ```
+  FROM python:3.11-slim
 
-    logging.info(f'Search form requests {search_text!r}')
-```
+  WORKDIR /app
+
+  COPY ./requirements.txt /app
+
+  RUN apt-get update \
+  && apt-get install -y --no-install-recommends git curl \
+  && apt-get purge -y --auto-remove \
+  && rm -rf /var/lib/apt/lists/*
+
+  RUN python3 -m pip install --no-cache-dir -r requirements.txt
+
+  COPY ./app.py /app
+
+  RUN mkdir -p /app/templates
+  COPY ./templates/index.html  /app/templates/index.html
+  COPY ./templates/images.html /app/templates/images.html
+
+  RUN mkdir -p /app/models
+  RUN curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output /app/models/ViT-B-32.pt
+
+  EXPOSE 3000
+  CMD [ "fastapi", "run", "app.py", "--port", "3000" ]
+  ```
+
 ]
 
-#slide[
-== Our POST method (2) - no CLIP model yet
-```python
-    if not clip_model.model:
-        return templates.TemplateResponse(
-            request=request,
-            name="images.html",
-            context={
-                "images": [],
-                "error_message": clip_model.error_string,
-            }
-        )
-```
-]
+// ==================================================================
 
-#slide[
-== Our POST method (3) - do the search
-```python
-    results = search_for_matches(search_text)
-    return templates.TemplateResponse(
-        request=request,
-        name="images.html",
-        context={
-            "images": results,
-            "error_message": "",
-        }
-    )
-```
-]
 
 
 // Remember to update the shortlink go.aiven.io/tibs-signup
@@ -844,7 +929,10 @@ async def search_form(
       )
     ],
 
-    tiaoma.qrcode("https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides", options: (scale: 2.0)),
+    tiaoma.qrcode(
+      "https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides",
+      options: (scale: 2.0),
+    ),
   )
 
 ]
