@@ -118,6 +118,43 @@
   )
 ]
 
+// ================================================================
+
+#slide[
+
+  #set page(fill: yellow)
+
+  == What I promised to talk about: Mostly done
+
+  - I'll give a quick introduction to vector search and CLIP,
+  - talk through setting up the necessary table in PostgreSQL®,
+  - walk through a script to calculate the embeddings of the chosen images,
+  - and store them in the database,
+  - and another script that takes a search text and uses pgvector to find matching
+    images in the database.
+
+  (hmm - not so much walking through as it stands at the moment)
+]
+
+#slide[
+
+  #set page(fill: yellow)
+
+  == What I promised to talk about: Still to do
+
+  - I'll then show how you can use FastAPI and HTMX to quickly make a web app
+    with a basic form.
+  - Merging the "find images" code into that then gives the final application.
+
+
+  So basically I need to show more of:
+
+  1. Introduce useful things
+  2. Put them together to give programs
+]
+
+// ================================================================
+
 #slide[
   == What we're about
 
@@ -178,7 +215,7 @@ _Is there any other code that is notable enough to talk about, given time?_
 
 #slide[
 
-  == Not an introduction to vectors and embeddings
+  == Vectors and embeddings
 
   ML people talk about vectors and embeddings and vector embeddings.
 
@@ -194,11 +231,11 @@ _Is there any other code that is notable enough to talk about, given time?_
 
 #slide[
 
-  == Not enough about vectors
+  == Why vectors?
 
   Broadly, we can describe the characteristics of things with numbers.
 
-  For instance, we can describe colours with RGB values.
+  For instance, we can describe colours with RGB values,\ or hotels with ratings.
 ]
 
 // Do I want to show a second arrow, or a second diagram with two arrows
@@ -220,9 +257,9 @@ _Is there any other code that is notable enough to talk about, given time?_
         line((0, 0, 0), (0, 10, 0), name: "red")
         line((0, 0, 0), (0, 0, 10), name: "green")
 
-        content((12, 0, 0), text(fill: red)[FF,0,0])
-        content((0, 11, 0), text(fill: green)[0,FF,0])
-        content((1, 0, 12), text(fill: blue)[0,0,FF])
+        content((12, 0, 0), text(fill: red)[ff,0,0])
+        content((0, 11, 0), text(fill: green)[0,ff,0])
+        content((1, 0, 12), text(fill: blue)[0,0,ff])
 
         line((9, 0, 0), (9, 0, 7), mark: (end: none), stroke: green)
         line((0, 0, 7), (9, 0, 7), mark: (end: none), stroke: green)
@@ -239,15 +276,15 @@ _Is there any other code that is notable enough to talk about, given time?_
 
         line((0, 0, 0), (9, 8, 7), stroke: (thickness: 5pt))
 
-        content((0.5, -1, 7), [B3])
-        content((-1, 8.5, 0), [CD])
-        content((9.5, -1, 0), [E6])
+        content((0.5, -1, 7), [b3])
+        content((-1, 8.5, 0), [cd])
+        content((9.5, -1, 0), [e6])
 
         content((14, 9.5, 10), box(
           fill: rgb(90%, 80%, 70%),
           outset: 7pt,
           radius: 5pt,
-        )[E6,CD,B3])
+        )[e6,cd,b3])
       },
     )
   ]
@@ -264,9 +301,11 @@ _Is there any other code that is notable enough to talk about, given time?_
 
   and we can do maths between vectors - for instance
 
-  Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
-  _similar to_
-  #highlight(fill: luma(230))[the vector between colour 3 and colour 4]?
+  #quote(block: true)[
+    Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
+    _similar to_
+    #highlight(fill: luma(230))[the vector between colour 3 and colour 4]?
+  ]
 ]
 
 #slide[
@@ -426,6 +465,38 @@ _Is there any other code that is notable enough to talk about, given time?_
 ]
 
 #slide[
+  == OpenAI CLIP
+
+  https://github.com/openai/CLIP and https://openai.com/index/clip/
+
+  #quote(block: true)[
+    OpenAI's CLIP (Contrastive Language-Image Pre-training) is a neural network that is
+    trained to understand images paired with natural language.]
+
+  - highly efficient
+  - flexible and general
+  - carefully limited in its ambitions (don't ask it to count things!)
+]
+
+#slide[
+  == CLIP libraries
+
+  We are using https://github.com/openai/CLIP
+
+  ```shell
+  pip install git+https://github.com/openai/CLIP.git
+  ```
+
+  OpenAI also suggest:
+
+  - #link("https://github.com/mlfoundations/open_clip")[OpenCLIP]:
+    includes larger and independently trained CLIP models up to ViT-G/14
+  - #link("https://huggingface.co/docs/transformers/model_doc/clip")[Hugging Face
+    implementation of CLIP]: for easier integration with the HF ecosystem
+
+]
+
+#slide[
   == Training CLIP: Contrastive pre-training
 
   #figure(
@@ -540,38 +611,6 @@ _Is there any other code that is notable enough to talk about, given time?_
   - OpenAI `clip` to talk to the CLIP model
 
   - `torch` to handle some ML related computations // try to explain this better
-]
-
-#slide[
-  == OpenAI CLIP
-
-  https://github.com/openai/CLIP and https://openai.com/index/clip/
-
-  #quote(block: true)[
-    OpenAI's CLIP (Contrastive Language-Image Pre-training) is a neural network that is
-    trained to understand images paired with natural language.]
-
-  - highly efficient
-  - flexible and general
-  - carefully limited in its ambitions (don't ask it to count things!)
-]
-
-#slide[
-  == CLIP libraries
-
-  We are using https://github.com/openai/CLIP
-
-  ```shell
-  pip install git+https://github.com/openai/CLIP.git
-  ```
-
-  OpenAI also suggest:
-
-  - #link("https://github.com/mlfoundations/open_clip")[OpenCLIP]:
-    includes larger and independently trained CLIP models up to ViT-G/14
-  - #link("https://huggingface.co/docs/transformers/model_doc/clip")[Hugging Face
-    implementation of CLIP]: for easier integration with the HF ecosystem
-
 ]
 
 #slide[
@@ -726,15 +765,6 @@ _Is there any other code that is notable enough to talk about, given time?_
   ```
 ]
 
-#slide[
-  - In _some_ order - either the order we use them, or perhaps text then image because people are used to text?
-    - Show code to create embedding for _text_
-]
-
-#slide[
-  - Show code to convert embedding to string suitable for SQL query
-]
-
 // Encode the text to compute the feature vector and normalize it
 // This is _very similar_ to what we do for the images
 #slide[
@@ -795,14 +825,12 @@ _Is there any other code that is notable enough to talk about, given time?_
 
 ]
 
-#slide[
-
-  _Is there any other code that is notable enough to talk about, given time?_
-]
-
 // ==================================================================
 
 #slide[
+
+  #set page(fill: yellow)
+
   == If there's time, talk about lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
 
   MAYBE MAYBE MAYBE
@@ -901,6 +929,9 @@ _Is there any other code that is notable enough to talk about, given time?_
 // ==================================================================
 
 #slide[
+
+  #set page(fill: yellow)
+
   - If there's time, maybe talk about "storing" the images on GitHub ("don't do that") so they're easy to display in HTML
 
   The images in the photos directory came from Unsplash and have been reduced in size to make them fit within GitHub filesize limits for a repository.
@@ -913,12 +944,18 @@ _Is there any other code that is notable enough to talk about, given time?_
 // ==================================================================
 
 #slide[
+
+  #set page(fill: yellow)
+
   - If there's time, just _show_ the GET / POST methods - or at least their outline/docs
 ]
 
 // ==================================================================
 
 #slide[
+
+  #set page(fill: yellow)
+  
   == Dockerfile
   ```
   FROM python:3.11-slim
