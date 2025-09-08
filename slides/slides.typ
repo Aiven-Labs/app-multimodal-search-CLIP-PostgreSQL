@@ -140,7 +140,7 @@
 
   #set page(fill: yellow)
 
-  == What I promised to talk about: Still to do
+  == What I promised to talk about: Still to work on / integrate properly
 
   - I'll then show how you can use FastAPI and HTMX to quickly make a web app
     with a basic form.
@@ -158,9 +158,23 @@
 #slide[
   == What we're about
 
-  #align(center)[_A picture of the app finding "cute dog"_]
+  #align(center)[
+    #image("images/app-start-page.png", width: 12em)
+  ]
 
-  #align(center)[_If we have the app, show the QR code and let people play_]
+  #align(
+    center + horizon,
+  )[_If we have the app,\ show the QR code\ and let people play_]
+]
+
+#slide[
+  #align(center)[
+    #box(
+      image("images/app-cute-dog.png", width: 12em),
+      clip: true,
+      inset: (bottom: -8em),
+    )
+  ]
 ]
 
 /*
@@ -514,7 +528,7 @@ final application.
   - #link("https://github.com/mlfoundations/open_clip")[OpenCLIP]:
     includes larger and independently trained CLIP models up to ViT-G/14
   - #link("https://huggingface.co/docs/transformers/model_doc/clip")[Hugging Face
-    implementation of CLIP]: for easier integration with the HF ecosystem
+      implementation of CLIP]: for easier integration with the HF ecosystem
 
 ]
 
@@ -876,46 +890,46 @@ final application.
 #slide[
   == GET the prompt
   ```python
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="index.html",
-        context={
-            "search_hint": "Find images like...",
-        },
-    )
+  @app.get("/", response_class=HTMLResponse)
+  async def index(request: Request):
+      return templates.TemplateResponse(
+          request=request,
+          name="index.html",
+          context={
+              "search_hint": "Find images like...",
+          },
+      )
   ```
 ]
 
 #slide[
-== `templates/index.html`
+  == `templates/index.html`
 
-(the interesting bits!)
-```html
-<p>{{ clip_model_status }}</p>
+  (the interesting bits!)
+  ```html
+  <p>{{ clip_model_status }}</p>
 
-<form hx-post="/search_form" hx-target="#response">
-	<input type="text" name="search_text"
-	       placeholder="{{ search_hint }}">
-  <button>Search</button>
-</form>
+  <form hx-post="/search_form" hx-target="#response">
+  	<input type="text" name="search_text"
+  	       placeholder="{{ search_hint }}">
+    <button>Search</button>
+  </form>
 
-<div id="response"><p>Nothing to see here yet</p></div>
-```
+  <div id="response"><p>Nothing to see here yet</p></div>
+  ```
 ]
 
 // Type hinting and logging left out for simplicity
 #slide[
   == POST the results
   ```python
-@app.post("/search_form", response_class=HTMLResponse)
-async def search_form(request, search_text):
-    if not clip_model.model:
-        return # ==> Error message
+  @app.post("/search_form", response_class=HTMLResponse)
+  async def search_form(request, search_text):
+      if not clip_model.model:
+          return # ==> Error message
 
-    results = search_for_matches(search_text)
-    return     # == > Success
+      results = search_for_matches(search_text)
+      return     # == > Success
   ```
 ]
 
@@ -952,30 +966,30 @@ async def search_form(request, search_text):
 
 // Show the error message first!
 #slide[
-== `templates/images.html` -- error reporting
+  == `templates/images.html` -- error reporting
 
-```html
-<div id="images">
-	{% if error_message %}
-	    <p> {{ error_message }} </p>
-	{% else %}
-	    <!-- show the images -->
-	{% endif %}
-</div>
-```
+  ```html
+  <div id="images">
+  	{% if error_message %}
+  	    <p> {{ error_message }} </p>
+  	{% else %}
+  	    <!-- show the images -->
+  	{% endif %}
+  </div>
+  ```
 ]
 
 #slide[
-== `templates/images.html` -- show the images
-```html
-	{% for item in images %}
-	    <p>Image {{ loop.index }}: {{ item[0] }}</p>
-	    <p><img src="{{ item[1] }}"
-	            alt="Image {{ item[0] }}"></p>
-	{% else %}
-	    <p>No results found</p>
-	{% endfor %}
-```
+  == `templates/images.html` -- show the images
+  ```html
+  	{% for item in images %}
+  	    <p>Image {{ loop.index }}: {{ item[0] }}</p>
+  	    <p><img src="{{ item[1] }}"
+  	            alt="Image {{ item[0] }}"></p>
+  	{% else %}
+  	    <p>No results found</p>
+  	{% endfor %}
+  ```
 ]
 
 // ==================================================================
@@ -1031,13 +1045,13 @@ async def search_form(request, search_text):
                         Callable[[PIL.Image],
                                   torch.Tensor]]
       error_string: str
-      ```
+  ```
 ]
 
 #slide[
   == And create our (global) instance
 
-```python
+  ```python
   clip_model = Model(
       None,
       None,
@@ -1105,6 +1119,15 @@ async def search_form(request, search_text):
   # Join things up
   app = FastAPI(lifespan=lifespan, redirect_slashes=False)
   ```
+]
+
+// And just to show what happens if I do a query too early
+#slide[
+  == CLIP model not loaded yet
+
+  #align(center)[
+    #image("images/app-CLIP-not-loaded.png")
+  ]
 ]
 
 
@@ -1212,4 +1235,12 @@ async def search_form(request, search_text):
     ),
   )
 
+]
+
+#slide[
+  #box(
+    image("images/app-man-jumping.png"),
+    clip: true,
+    inset: (bottom: -2em),
+  )
 ]
