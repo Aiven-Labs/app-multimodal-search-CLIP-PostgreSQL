@@ -185,19 +185,40 @@ _Is there any other code that is notable enough to talk about, given time?_
 ]
 */
 
+/*
+From the abstract
+
+The original LLMs (large language models) worked with text, making it possible to use a
+phrase to search for documents with a similar meaning. Later models addressed other media,
+for instance, allowing comparison of images. And now we have multi-modal models, like
+OpenAI's CLIP, which can work with images and text interchangably.
+
+I'll give a quick introduction to vector search and CLIP,
+talk through setting up the necessary table in PostgreSQL®,
+walk through a script to calculate the embeddings of the chosen images,
+and store them in the database, and another script that takes a search text
+and uses pgvector to find matching images in the database.
+
+I'll then show how you can use FastAPI and HTMX to quickly make a web app
+with a basic form. Merging the "find images" code into that then gives the
+final application.
+*/
+
 #slide[
-  == Possible agenda
+  == Agenda
 
-  - Brief introduction to LMM / vector embeddings
-  - Describe app structure / components
-
-  _Is there any other code that is notable enough to talk about, given time?_
-
-  - If we have the app, then _maybe_ show the Dockerfile and how to run the app
+  - Brief introduction to LMM / vector embeddings / CLIP
+  - Our process
+  - Setting up PostgreSQL
+  - Calculating and storing image embeddings
+  - Check: find an image!
+  - Wrap that up into an app
 ]
 
 #slide[
-  == Brief introduction to LMM / vector embeddings
+  #align(horizon + center)[
+    #heading()[A brief introduction\ to LLM/LMM and \ vector embeddings]
+  ]
 ]
 
 // I like this slide - can I keep this slide? Even though I've used it before?
@@ -212,6 +233,7 @@ _Is there any other code that is notable enough to talk about, given time?_
     ],
   )
 ]
+
 
 #slide[
 
@@ -517,6 +539,12 @@ _Is there any other code that is notable enough to talk about, given time?_
   )
 ]
 
+#slide[
+  #align(horizon + center)[
+    #heading()[How things work]
+  ]
+]
+
 // Describe the overall flow of what we're doing
 #slide[
   // And I want a smaller text size for the captions / diagram components
@@ -614,7 +642,9 @@ _Is there any other code that is notable enough to talk about, given time?_
 ]
 
 #slide[
-  == Let's talk about code
+  #align(horizon + center)[
+    #heading()[Setting up PostgreSQL]
+  ]
 ]
 
 #slide[
@@ -647,6 +677,12 @@ _Is there any other code that is notable enough to talk about, given time?_
   - `embedding` is the vector for this image
 
   CLIP uses vectors with 512 elements
+]
+
+#slide[
+  #align(horizon + center)[
+    #heading()[Calculating and storing image embeddings]
+  ]
 ]
 
 // For both text and image (so process_images.py and app.py)
@@ -765,6 +801,12 @@ _Is there any other code that is notable enough to talk about, given time?_
   ```
 ]
 
+#slide[
+  #align(horizon + center)[
+    #heading()[Find an image]
+  ]
+]
+
 // Encode the text to compute the feature vector and normalize it
 // This is _very similar_ to what we do for the images
 #slide[
@@ -825,15 +867,132 @@ _Is there any other code that is notable enough to talk about, given time?_
 
 ]
 
+#slide[
+  #align(horizon + center)[
+    #heading()[Make an application]
+  ]
+]
+
+#slide[
+  == GET the prompt
+  ```python
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "search_hint": "Find images like...",
+        },
+    )
+  ```
+]
+
+#slide[
+== `templates/index.html`
+
+(the interesting bits!)
+```html
+<p>{{ clip_model_status }}</p>
+
+<form hx-post="/search_form" hx-target="#response">
+	<input type="text" name="search_text"
+	       placeholder="{{ search_hint }}">
+  <button>Search</button>
+</form>
+
+<div id="response"><p>Nothing to see here yet</p></div>
+```
+]
+
+// Type hinting and logging left out for simplicity
+#slide[
+  == POST the results
+  ```python
+@app.post("/search_form", response_class=HTMLResponse)
+async def search_form(request, search_text):
+    if not clip_model.model:
+        return # ==> Error message
+
+    results = search_for_matches(search_text)
+    return     # == > Success
+  ```
+]
+
+// No CLIP model yet, so no results, just an error
+#slide[
+  == Showing the results: Error message
+  ```python
+  return templates.TemplateResponse(
+      request=request,
+      name="images.html",
+      context={
+          "images": [],
+          "error_message": clip_model.error_string,
+      }
+  )
+  ```
+]
+
+// Success - we have results, and our error message is empty
+#slide[
+  == Showing the results: Success
+  ```python
+    results = search_for_matches(search_text)
+    return templates.TemplateResponse(
+        request=request,
+        name="images.html",
+        context={
+            "images": results,
+            "error_message": "",
+        }
+    )
+  ```
+]
+
+// Show the error message first!
+#slide[
+== `templates/images.html` -- error reporting
+
+```html
+<div id="images">
+	{% if error_message %}
+	    <p> {{ error_message }} </p>
+	{% else %}
+	    <!-- show the images -->
+	{% endif %}
+</div>
+```
+]
+
+#slide[
+== `templates/images.html` -- show the images
+```html
+	{% for item in images %}
+	    <p>Image {{ loop.index }}: {{ item[0] }}</p>
+	    <p><img src="{{ item[1] }}"
+	            alt="Image {{ item[0] }}"></p>
+	{% else %}
+	    <p>No results found</p>
+	{% endfor %}
+```
+]
+
 // ==================================================================
 
 #slide[
 
   #set page(fill: yellow)
 
-  == If there's time, talk about lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
+  == If there's time, talk about lazy loading the model at run time, and/or downloading the model during `Dockerfile` setup
 
   MAYBE MAYBE MAYBE
+]
+
+#slide[
+  #align(horizon + center)[
+    #heading()[Lazy loading the CLIP model]
+  ]
 ]
 
 // For both text and image (so process_images.py and app.py)
@@ -854,7 +1013,7 @@ _Is there any other code that is notable enough to talk about, given time?_
   MODEL_NAME = 'ViT-B/32'
   DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
   ```
-  ...but we delegate _loading_ the model to a function
+  ...but what if we delegate _loading_ the model to a function
 ]
 
 // The types of the values are found from the docstring for clip.load
@@ -863,36 +1022,62 @@ _Is there any other code that is notable enough to talk about, given time?_
 //
 // (we could just make them type Any, but it's interesting to know the actual types)
 #slide[
-  == Let's define our Model, ready for lazy-loading
+  == Let's define a Model, ready for lazy-loading
   ```python
   @dataclass
   class Model:
       model: Union[None, torch.nn.Module]
       preprocess: Union[None,
-                        Callable[[PIL.Image], torch.Tensor]]
+                        Callable[[PIL.Image],
+                                  torch.Tensor]]
       error_string: str
+      ```
+]
 
+#slide[
+  == And create our (global) instance
+
+```python
   clip_model = Model(
-      None, None,
+      None,
+      None,
       "CLIP model not loaded yet - try again soon")
   ```
 ]
 
 // And the function that does the loading.
-// I've left out error handling - naughty me - but it basically raises an
-// logs the exception and sets `clip_model.error_string` to a message saying
-// "Unable to load CLIP model - please restart the application"
+//
+// We *could* (and maybe should) unset the `clip_model.error_string` if
+// we succeed in importing the model - but instead we just rely on the
+// code checking to see if `clip_model.model` is set, and assuming that
+// in that case it won't look at the `error_string`.
 #slide[
+  == Loading the model - now in a function
   ```python
   def load_clip_model():
-      if LOCAL_MODEL.exists():
-          logger.info(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
-          logger.info(f'Using {DEVICE}')
-          clip_model.model, clip_model.preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+      try:
+          # Load the model
+      except Exception as exc:
+          clip_model.error_string = 'Unable to load CLIP'
+              ' model - please restart the application'
+          logger.exception(clip_model.error_string)
       else:
-          logger.info(f'Importing CLIP model {MODEL_NAME}')
-          logger.info(f'Using {DEVICE}')
-          clip_model.model, clip_model.preprocess = clip.load(MODEL_NAME, device=DEVICE)
+          logger.info('CLIP model imported')
+  ```
+]
+
+#slide[
+  == The actual "Load the model" bit
+  ```python
+      if LOCAL_MODEL.exists():
+          clip_model.model, clip_model.preprocess = \
+              clip.load(
+                  MODEL_NAME, device=DEVICE,
+                  download_root=LOCAL_MODEL.parent)
+      else:
+          clip_model.model, clip_model.preprocess = \
+              clip.load(
+                  MODEL_NAME, device=DEVICE)
   ```
 ]
 
@@ -903,24 +1088,21 @@ _Is there any other code that is notable enough to talk about, given time?_
 //
 // And we needed the Model structure so that we could know when the async
 // model loading had finished
+//
+// Note we're only adding a step *before* the main app runs
+// - we don't need anything at the end, so there's nothing after the yield
 #slide[
+  == And handle that as part of the `fastapi` lifespan
   ```python
   @asynccontextmanager
   async def lifespan(app: FastAPI):
-      logger.info('Async load task starting')
 
       blocking_loader = asyncio.to_thread(load_clip_model)
       asyncio.create_task(blocking_loader)
 
       yield
 
-      # We don't have an unload step
-  ```
-]
-
-#slide[
-  == Join things up...
-  ```python
+  # Join things up
   app = FastAPI(lifespan=lifespan, redirect_slashes=False)
   ```
 ]
@@ -955,7 +1137,7 @@ _Is there any other code that is notable enough to talk about, given time?_
 #slide[
 
   #set page(fill: yellow)
-  
+
   == Dockerfile
   ```
   FROM python:3.11-slim
