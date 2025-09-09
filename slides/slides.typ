@@ -543,14 +543,19 @@ final application.
   )
 ]
 
+// - `create_table.py`   -- create the table we need in PG
+// - `process_images.py` -- calculate the image embeddings and put them into PG
+// - `find_images.py`    -- for testing it all works
+// - `app.py`            -- the thing itself
 #slide[
   == The app and related programs
-  - We separate _preparing the database_ from _using the app_
+
+  We separate _preparing the database_ from _using the app_
 
   - `create_table.py`
   - `process_images.py`
-  - `find_images.py` -- for testing
-  - `app.py` -- the thing itself
+  - `find_images.py`
+  - `app.py`
 ]
 
 // - typing to make our code better
@@ -847,7 +852,7 @@ final application.
       results = search_for_matches(search_text)
       return     # ==> Success
   ```
-  "Error message" and "Success" code on the next slides
+  "`Error message`" and "`Success`" code on the next slides
 ]
 
 // No CLIP model yet, so no results, just an error
@@ -894,7 +899,7 @@ final application.
   	{% endif %}
   </div>
   ```
-  "Show the images" code on the next slide
+  "`Show the images`" code on the next slide
 ]
 
 #slide[
@@ -935,16 +940,16 @@ final application.
 
   model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
   ```
+  ...but this downloads the CLIP model at runtime.
+
+  What if we lazy load it?
 ]
 
 #slide[
-  == This is familiar
+  == Let's define where we'll keep the model file
   ```python
   LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-  MODEL_NAME = 'ViT-B/32'
-  DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
   ```
-  ...but what if we delegate _loading_ the model to a function
 ]
 
 // The types of the values are found from the docstring for clip.load
@@ -953,7 +958,7 @@ final application.
 //
 // (we could just make them type Any, but it's interesting to know the actual types)
 #slide[
-  == Let's define a Model, ready for lazy-loading
+  == Let's define a Model to hold our model data
   ```python
   @dataclass
   class Model:
@@ -966,7 +971,7 @@ final application.
 ]
 
 #slide[
-  == And create our (global) instance
+  == And create a (global) instance
 
   ```python
   clip_model = Model(
@@ -995,7 +1000,7 @@ final application.
       else:
           logger.info('CLIP model imported')
   ```
-  "Load the model" code on the next slide
+  "`Load the model`" code on the next slide
 ]
 
 #slide[
@@ -1115,7 +1120,7 @@ final application.
 
       Also, we're hiring! See https://aiven.io/careers
     ],
-    tiaoma.qrcode("https://go.aiven.io/5-kinds-of-db", options: (scale: 2.35)),
+    tiaoma.qrcode("https://go.aiven.io/pyconuk-clip", options: (scale: 2.35)),
 
     [
       Slides created using
