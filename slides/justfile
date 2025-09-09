@@ -6,11 +6,11 @@
 # * Libertinus fonts, from https://github.com/alerque/libertinus
 
 # Make PDF files for slides
-pdf: slides
+pdf:
+  typst compile -f pdf slides.typ
 
 # Make PDF files for slides and open them (Mac only)
-slides:
-  typst compile -f pdf slides.typ
+slides: pdf
   open slides.pdf
 
 # Delete the generated PDF files
