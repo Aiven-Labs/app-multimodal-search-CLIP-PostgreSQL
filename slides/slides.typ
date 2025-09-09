@@ -120,43 +120,6 @@
   )
 ]
 
-// ================================================================
-
-#slide[
-
-  #set page(fill: yellow)
-
-  == What I promised to talk about: Mostly done
-
-  - I'll give a quick introduction to vector search and CLIP,
-  - talk through setting up the necessary table in PostgreSQL®,
-  - walk through a script to calculate the embeddings of the chosen images,
-  - and store them in the database,
-  - and another script that takes a search text and uses pgvector to find matching
-    images in the database.
-
-  (hmm - not so much walking through as it stands at the moment)
-]
-
-#slide[
-
-  #set page(fill: yellow)
-
-  == What I promised to talk about: Still to work on / integrate properly
-
-  - I'll then show how you can use FastAPI and HTMX to quickly make a web app
-    with a basic form.
-  - Merging the "find images" code into that then gives the final application.
-
-
-  So basically I need to show more of:
-
-  1. Introduce useful things
-  2. Put them together to give programs
-]
-
-// ================================================================
-
 #slide[
   == What we're about
   #align(center)[
@@ -333,13 +296,28 @@ final application.
   - length
   - direction
 
-  and we can do maths between vectors - for instance
+  and we can do maths between vectors - for instance:
 
+  #grid(
+    columns: (auto, auto, auto),
+    rows: (auto, auto),
+    column-gutter: 5pt,
+    row-gutter: 20pt,
+    [Is #h(10pt)],
+    highlight(fill: luma(230))[the vector between colour 1 and colour 2],
+    [#h(10pt) _similar to_],
+    [ ],
+    [#highlight(fill: luma(230))[the vector between colour 3 and colour 4]],
+    [?],
+  )
+
+/*
   #quote(block: true)[
     Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
     _similar to_
     #highlight(fill: luma(230))[the vector between colour 3 and colour 4]?
   ]
+  */
 ]
 
 #slide[
@@ -426,63 +404,6 @@ final application.
   ]
 ]
 
-/*
-// Jay's extension of Olena's grid, with "Dimensions"
-// Is this a slide I can use / explain?
-
-// Also, I really should create this slide using the data from the previous slide,
-// rather than copying the whole thing!
-#slide[
-
-  #grid(
-    columns: (auto, auto, auto, auto),
-    align: horizon,
-    table(
-    align: right,
-      columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      rows:  (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      [ ], [0], [1], [2], [3], [4], [5],
-      [0], [👗], [ ], [ ], [ ], [ ], [🐶],
-      [1], [👠], [👟], [ ], [ ], [🐻], [ ],
-      [2], [ ], [ ], [ ], [ ], [ ], [ ],
-      [3], [💳], [💶], [ ], [ ], [ ], [ ],
-      [4], [ ], [ ], [ ], [ ], [ ], [ ],
-      [4], [ ], [ ], [ ], [ ], [ ], [🎸],
-    ),
-    grid.cell(inset: 0.5em, sym.arrow),
-    table(
-    align: right,
-      columns: (1.5em, 1.5em, 1.5em),
-      rows: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-      [ ], [X], [Y],
-     [👗], [0], [0],
-     [👠], [0], [1],
-     [👟], [1], [1],
-     [🐶], [5], [0],
-     [🐻], [4], [1],
-     [💳], [0], [3],
-     [💶], [1], [3],
-     [🎸], [5], [5],
-    ),
-    grid.cell(
-    align: bottom,
-    inset: 1em,
-    text(
-    ["bear in a dress wearing heels" \
-    \
-    Dimensions \
-    🐻 👗  👠 [[4,1], [0,0], [0,1]] \
-    🐶 👗  👠 [[5,0], [0,0], [0,1]] \
-    🐻 👗  👟 [[4,1], [0,0], [1,1]] \
-    🐶 👗  👟 [[5,0], [0,0], [1,1]] \
-
-    ]
-    )
-    )
-  )
-]
-*/
-
 #slide[
   == Multimodal magic
 
@@ -505,7 +426,8 @@ final application.
 
   #quote(block: true)[
     OpenAI's CLIP (Contrastive Language-Image Pre-training) is a neural network that is
-    trained to understand images paired with natural language.]
+    trained to understand images paired with natural language.
+  ]
 
   - highly efficient
   - flexible and general
@@ -539,6 +461,7 @@ final application.
   )
 ]
 
+/* TRY NOT USING THIS SLIDE
 // If I understand this correctly, this is actually doing the opposite of
 // what we're doing - it's taking an image and returning a corresponding text
 // or description
@@ -551,6 +474,7 @@ final application.
     caption: text(size: 20pt)[source: https://github.com/openai/CLIP],
   )
 ]
+*/
 
 #slide[
   #align(horizon + center)[
@@ -645,11 +569,11 @@ final application.
 
   - `fastapi` for our web app
 
-  - `jinja2` to handle our HTML templating
+    - `jinja2` to handle our HTML templating
 
   - `psycopg` to talk to PostgreSQL#super[®]
 
-  - OpenAI `clip` to talk to the CLIP model
+  - `clip` from OpenAI to talk to the CLIP model
 
   - `torch` to handle some ML related computations // try to explain this better
 ]
@@ -665,7 +589,7 @@ final application.
 #slide[
   == Enable pgvector
 
-  Enable the #link("https://github.com/pgvector/pgvector")[pgvector]:
+  Enable the #link("https://github.com/pgvector/pgvector")[`pgvector`] extension:
 
   ```sql
   CREATE EXTENSION vector;
@@ -727,11 +651,13 @@ final application.
 #slide[
   == Process a batch of photos (1)
   ```python
-  photos = [Image.open(photo_file)
-              for photo_file in photos_batch]
+  def compute_clip_features(photos_batch):
+      photos = [Image.open(photo_file)
+                  for photo_file in photos_batch]
 
-  photos_preprocessed = torch.stack(
-      [preprocess(photo) for photo in photos]).to(DEVICE)
+      photos_preprocessed = torch.stack(
+          [preprocess(photo)
+              for photo in photos]).to(DEVICE)
   ```
 ]
 
@@ -739,16 +665,16 @@ final application.
   == Process a batch of photos (2)
 
   ```python
-  with torch.no_grad():
-      photos_features = model.encode_image(
-          photos_preprocessed
-      )
-      photos_features /= photos_features.norm(
-          dim=-1,
-          keepdim=True
-      )
+      with torch.no_grad():
+          photos_features = model.encode_image(
+              photos_preprocessed
+          )
+          photos_features /= photos_features.norm(
+              dim=-1,
+              keepdim=True
+          )
 
-  return photos_features.cpu().numpy()
+      return photos_features.cpu().numpy()
   ```
 ]
 
@@ -763,7 +689,7 @@ final application.
       return vector_str
   ```
 
-  Convert NumPy `ndarray` to a string:
+  Converts a NumPy `ndarray` to a string:
 
   `[1.88626274e-02, ..., -2.86908299e-02], dtype=float32)` \
   #sym.arrow.r.stroked `"[0.01886262744665146, ..., -0.028690829873085022]"`
@@ -837,35 +763,8 @@ final application.
   ```
 ]
 
-// CHOOSE ONE OF VERSION A or VERSION B
-// If VERSION B, then consider whether I want a heading on other
-// slides with a `def` line
-
-// ===== VERSION A - heading but no `def` line
-// Returns pairs of the form (image_name, image_url)
-// I've left out error handling - if an exception occurs,
-// it will return (None, None)
 #slide[
   == Find matches
-  ```python
-      vector = get_single_embedding(text)
-      embedding_string = vector_to_string(vector)
-      with psycopg.connect(SERVICE_URI) as conn:
-          with conn.cursor() as cur:
-              cur.execute(
-                  "SELECT filename, url FROM pictures"
-                  " ORDER BY embedding <-> %s LIMIT 4;",
-                  (embedding_string,),
-              )
-              return cur.fetchall()
-  ```
-]
-
-// ===== VERSION B - no heading but with `def` line
-// Returns pairs of the form (image_name, image_url)
-// I've left out error handling - if an exception occurs,
-// it will return (None, None)
-#slide[
   ```python
   def search_for_matches(text):
       vector = get_single_embedding(text)
@@ -875,8 +774,7 @@ final application.
               cur.execute(
                   "SELECT filename, url FROM pictures"
                   " ORDER BY embedding <-> %s LIMIT 4;",
-                  (embedding_string,),
-              )
+                  (embedding_string,))
               return cur.fetchall()
   ```
 ]
@@ -983,9 +881,9 @@ final application.
   ```
 ]
 
-// Show the error message first!
+// Show the details of "success" on the next slide
 #slide[
-  == `templates/images.html` -- error reporting
+  == `templates/images.html`
 
   ```html
   <div id="images">
@@ -1015,12 +913,9 @@ final application.
 // ==================================================================
 
 #slide[
-
   #set page(fill: yellow)
 
   == If there's time, talk about lazy loading the model at run time, and/or downloading the model during `Dockerfile` setup
-
-  MAYBE MAYBE MAYBE
 ]
 
 #slide[
