@@ -17,7 +17,7 @@
 // and install it using /Applications/Font Book
 //
 // Before that, I was being traditional and using "Times Roman" and "Helivitica"
-// (or "Helvetica Neue")
+// (or "Helvetica Neue") and "Courier" for monospace text
 
 #set text(font: "Libertinus Sans")
 
@@ -65,7 +65,9 @@
 
 // Give a very light grey background to code blocks, and make them all the same width
 #show raw.where(block: true): it => block(
-  fill: luma(240),
+  // Previously I tried `fill: luma(240)`, but I actually prefer
+  // the colour that rst2pdf uses for code block in slides
+  fill: rgb("f0f8ff"),
   width: 35em,
   inset: 5pt,
   it,
@@ -73,7 +75,7 @@
 
 // But be more subtle with inline code
 #show raw.where(block: false): box.with(
-  fill: luma(240),
+  // I _think_ we can do without a fill colour for inline code terms
   inset: (x: 3pt, y: 0pt),
   outset: (y: 3pt),
 )
@@ -763,8 +765,7 @@ final application.
 
   Convert NumPy `ndarray` to a string:
 
-  `[1.88626274e-02, ..., -2.86908299e-02], dtype=float32)`
-
+  `[1.88626274e-02, ..., -2.86908299e-02], dtype=float32)` \
   #sym.arrow.r.stroked `"[0.01886262744665146, ..., -0.028690829873085022]"`
 ]
 
