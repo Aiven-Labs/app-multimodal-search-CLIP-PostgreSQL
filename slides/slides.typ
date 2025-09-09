@@ -157,22 +157,18 @@
 
 #slide[
   == What we're about
-
   #align(center)[
-    #image("images/app-start-page.png", width: 12em)
-  ]
-
-  #align(
-    center + horizon,
-  )[_If we have the app,\ show the QR code\ and let people play_]
-]
-
-#slide[
-  #align(center)[
-    #box(
-      image("images/app-cute-dog.png", width: 12em),
-      clip: true,
-      inset: (bottom: -8em),
+    #grid(
+      columns: (auto, auto),
+      gutter: 2em,
+      box(
+        image("images/app-cute-dog.png", width: 10em),
+        clip: true,
+        inset: (bottom: -6.2em),
+      ),
+      align(
+        center + horizon,
+      )[_If we have the app,\ show the QR code\ and let people play_],
     )
   ]
 ]
@@ -221,8 +217,8 @@ final application.
 #slide[
   == Agenda
 
-  - Brief introduction to LMM / vector embeddings / CLIP
-  - Our process
+  - A brief introduction to LMM / vector embeddings / CLIP
+  - Overview of how the app works
   - Setting up PostgreSQL
   - Calculating and storing image embeddings
   - Check: find an image!
@@ -544,6 +540,7 @@ final application.
 // If I understand this correctly, this is actually doing the opposite of
 // what we're doing - it's taking an image and returning a corresponding text
 // or description
+// Do I actually want/need this slide, or is the previous one sufficient?
 #slide[
   == Training CLIP: Create dataset classifier, predict...
 
@@ -555,7 +552,7 @@ final application.
 
 #slide[
   #align(horizon + center)[
-    #heading()[How things work]
+    #heading()[Overview of how the app works]
   ]
 ]
 
@@ -621,7 +618,7 @@ final application.
 ]
 
 #slide[
-  == Describe app structure / components
+  == The app and related programs
   - We separate _preparing the database_ from _using the app_
 
   - `create_table.py`
@@ -659,6 +656,8 @@ final application.
   #align(horizon + center)[
     #heading()[Setting up PostgreSQL]
   ]
+
+  #align(center + horizon)[`create_table.py`]
 ]
 
 #slide[
@@ -697,9 +696,22 @@ final application.
   #align(horizon + center)[
     #heading()[Calculating and storing image embeddings]
   ]
+
+  #align(center + horizon)[`process_images.py`]
 ]
 
 // For both text and image (so process_images.py and app.py)
+//
+// This is assuming that we let `clip.load` automatically download
+// the model file when it is first run.
+// It will default to being cached in ~/.cache/clip.
+//
+// This is OK for process_images.py, but not something we want to
+// do for the actual app, otherwise the first user query would have
+// a LONG wait while the model is downloaded - and sometimes that
+// download fails, which would mean we'd have to give the user an
+// error message :(
+// So for the app we do lazy loading - see later if we have time.
 #slide[
   == Load the open CLIP model
   ```python
@@ -707,28 +719,6 @@ final application.
   DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
   model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
-  ```
-]
-
-// But actually we don't really *want* to let the CLIP package
-// lazily download the model, as that makes the first query very slow
-// (and may fail). So we allow for the model to have been downloaded
-// beforehand.
-//
-// (Note: If we let `clip` download it, it will default to being cached in ~/.cache/clip)
-#slide[
-  == Load the open CLIP model (actually)
-  ```python
-  MODEL_NAME = 'ViT-B/32'
-  LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-
-  if LOCAL_MODEL.exists():
-      model, preprocess = clip.load(
-          MODEL_NAME, device=DEVICE,
-          download_root=LOCAL_MODEL.parent)
-  else:
-      model, preprocess = clip.load(
-          MODEL_NAME, device=DEVICE)
   ```
 ]
 
@@ -758,6 +748,24 @@ final application.
 
   return photos_features.cpu().numpy()
   ```
+]
+
+#slide[
+  == Convert an embedding vector into an SQL string
+  ```python
+  def vector_to_string(embedding):
+      vector_str = ", ".join(
+          str(x) for x in embedding.tolist()
+      )
+      vector_str = f'[{vector_str}]'
+      return vector_str
+  ```
+
+  Convert NumPy `ndarray` to a string:
+
+  `[1.88626274e-02, ..., -2.86908299e-02], dtype=float32)`
+
+  #sym.arrow.r.stroked `"[0.01886262744665146, ..., -0.028690829873085022]"`
 ]
 
 // See https://www.postgresql.org/docs/current/sql-copy.html for COPY .. FROM STDIN
@@ -804,26 +812,17 @@ final application.
 ]
 
 #slide[
-  == Convert an embedding vector into an SQL string
-  ```python
-  def vector_to_string(embedding):
-      vector_str = ", ".join(
-          str(x) for x in embedding.tolist()
-      )
-      vector_str = f'[{vector_str}]'
-      return vector_str
-  ```
-]
-
-#slide[
   #align(horizon + center)[
-    #heading()[Find an image]
+    #heading()[Find some images]
+
+    #align(center + horizon)[`find_images.py`]
   ]
 ]
 
 // Encode the text to compute the feature vector and normalize it
 // This is _very similar_ to what we do for the images
 #slide[
+  == Get the embedding for the user's text string
   ```python
   def get_single_embedding(text):
       with torch.no_grad():
@@ -833,27 +832,43 @@ final application.
           text_features /= \
                text_features.norm(dim=-1, keepdim=True)
 
-      # Return the feature vector
       return text_features.cpu().numpy()[0]
   ```
 ]
 
-#slide[
-  ```python
-  def search_for_matches(text):
-      """Returns pairs of the form (image_name, image_url)"""
-      logger.info(f'Searching for {text!r}')
-      vector = get_single_embedding(text)
+// CHOOSE ONE OF VERSION A or VERSION B
+// If VERSION B, then consider whether I want a heading on other
+// slides with a `def` line
 
+// ===== VERSION A - heading but no `def` line
+// Returns pairs of the form (image_name, image_url)
+// I've left out error handling - if an exception occurs,
+// it will return (None, None)
+#slide[
+  == Find matches
+  ```python
+      vector = get_single_embedding(text)
       embedding_string = vector_to_string(vector)
+      with psycopg.connect(SERVICE_URI) as conn:
+          with conn.cursor() as cur:
+              cur.execute(
+                  "SELECT filename, url FROM pictures"
+                  " ORDER BY embedding <-> %s LIMIT 4;",
+                  (embedding_string,),
+              )
+              return cur.fetchall()
   ```
 ]
 
+// ===== VERSION B - no heading but with `def` line
+// Returns pairs of the form (image_name, image_url)
 // I've left out error handling - if an exception occurs,
 // it will return (None, None)
 #slide[
   ```python
-      # Perform search
+  def search_for_matches(text):
+      vector = get_single_embedding(text)
+      embedding_string = vector_to_string(vector)
       with psycopg.connect(SERVICE_URI) as conn:
           with conn.cursor() as cur:
               cur.execute(
@@ -885,6 +900,8 @@ final application.
   #align(horizon + center)[
     #heading()[Make an application]
   ]
+
+  #align(center + horizon)[`app.py`]
 ]
 
 #slide[
@@ -929,13 +946,14 @@ final application.
           return # ==> Error message
 
       results = search_for_matches(search_text)
-      return     # == > Success
+      return     # ==> Success
   ```
+  "Error message" and "Success" code on the next slides
 ]
 
 // No CLIP model yet, so no results, just an error
 #slide[
-  == Showing the results: Error message
+  == POST the results: Error message
   ```python
   return templates.TemplateResponse(
       request=request,
@@ -950,7 +968,7 @@ final application.
 
 // Success - we have results, and our error message is empty
 #slide[
-  == Showing the results: Success
+  == POST the results: Success
   ```python
     results = search_for_matches(search_text)
     return templates.TemplateResponse(
@@ -973,10 +991,11 @@ final application.
   	{% if error_message %}
   	    <p> {{ error_message }} </p>
   	{% else %}
-  	    <!-- show the images -->
+  	    <!-- Show the images -->
   	{% endif %}
   </div>
   ```
+  "Show the images" code on the next slide
 ]
 
 #slide[
@@ -1007,6 +1026,8 @@ final application.
   #align(horizon + center)[
     #heading()[Lazy loading the CLIP model]
   ]
+
+  #align(center + horizon)[`app.py`]
 ]
 
 // For both text and image (so process_images.py and app.py)
@@ -1066,7 +1087,7 @@ final application.
 // code checking to see if `clip_model.model` is set, and assuming that
 // in that case it won't look at the `error_string`.
 #slide[
-  == Loading the model - now in a function
+  == Load the model - now in a function
   ```python
   def load_clip_model():
       try:
@@ -1078,10 +1099,11 @@ final application.
       else:
           logger.info('CLIP model imported')
   ```
+  "Load the model" code on the next slide
 ]
 
 #slide[
-  == The actual "Load the model" bit
+  == Load the model - the actual code
   ```python
       if LOCAL_MODEL.exists():
           clip_model.model, clip_model.preprocess = \
@@ -1130,20 +1152,37 @@ final application.
   ]
 ]
 
+#slide[
+  #align(center)[
+    #box(
+      image("images/app-man-jumping.png"),
+      clip: true,
+      inset: (bottom: -2em),
+    )
+  ]
+]
+
 
 // ==================================================================
 
+// We should instead store the images in a proper filestore, or even in a database
+// (PostgreSQL or perhaps Valkey). But that would almost certainly require us to
+// retrieve the image to local storage display, and we'd then need to make sure
+// we didn't _keep_ them too long, as we don't have much local storage. This is
+// the sort of design discussion that we'd need for anything beyond this MVP
+// (minimum viable product).
 #slide[
-
   #set page(fill: yellow)
 
-  - If there's time, maybe talk about "storing" the images on GitHub ("don't do that") so they're easy to display in HTML
+  == If there's time, talk about "storing" the images on GitHub ("don't do that")
 
-  The images in the photos directory came from Unsplash and have been reduced in size to make them fit within GitHub filesize limits for a repository.
+  The images in the `photos/` directory came from Unsplash and have been reduced in size
+  to make them fit within GitHub repository filesize limits.
 
-  Note When the app is running, it retrieves the images for the HTML page directly from this GitHub repository. This is not good practice for a production app, as GitHub is not intended to act as an image repository for web apps.
-
-
+  When the app is running and shows images, it uses the URL for the image in the
+  GitHub repository in the `<img>` tag.
+  This is not good practice for a production app, as GitHub is not intended to act
+  as an image repository for web apps.
 ]
 
 // ==================================================================
@@ -1152,43 +1191,9 @@ final application.
 
   #set page(fill: yellow)
 
-  - If there's time, just _show_ the GET / POST methods - or at least their outline/docs
-]
+  == If there's time, discuss the Docker container
 
-// ==================================================================
-
-#slide[
-
-  #set page(fill: yellow)
-
-  == Dockerfile
-  ```
-  FROM python:3.11-slim
-
-  WORKDIR /app
-
-  COPY ./requirements.txt /app
-
-  RUN apt-get update \
-  && apt-get install -y --no-install-recommends git curl \
-  && apt-get purge -y --auto-remove \
-  && rm -rf /var/lib/apt/lists/*
-
-  RUN python3 -m pip install --no-cache-dir -r requirements.txt
-
-  COPY ./app.py /app
-
-  RUN mkdir -p /app/templates
-  COPY ./templates/index.html  /app/templates/index.html
-  COPY ./templates/images.html /app/templates/images.html
-
-  RUN mkdir -p /app/models
-  RUN curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output /app/models/ViT-B-32.pt
-
-  EXPOSE 3000
-  CMD [ "fastapi", "run", "app.py", "--port", "3000" ]
-  ```
-
+  There won't be time...
 ]
 
 // ==================================================================
@@ -1235,12 +1240,4 @@ final application.
     ),
   )
 
-]
-
-#slide[
-  #box(
-    image("images/app-man-jumping.png"),
-    clip: true,
-    inset: (bottom: -2em),
-  )
 ]
