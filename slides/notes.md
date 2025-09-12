@@ -41,7 +41,6 @@ on always apply.
 
 Apparently trained on 400 million image-text pairs collected from the Internet.
 
-https://voxel51.com/blog/a-history-of-clip-model-training-data-advances
 Specifically, the contrastive approach means:
 - It's presented with paired image and text - those represent as close as 
   posible in the embedding space
@@ -95,5 +94,7 @@ More background on multimodal models
 * 2024, `[at] Editorial Team` [An Introduction to Large Multimodal Models](https://www.alexanderthamm.com/en/blog/an-introduction-to-large-multimodal-models/)
 * 2024, Harry Guinness [How does ChatGPT work?](https://zapier.com/blog/how-does-chatgpt-work/)
 
+and
 
+* 2024 Voxel51 [A History of CLIP Model Training Data Advances](https://voxel51.com/blog/a-history-of-clip-model-training-data-advances)
 
