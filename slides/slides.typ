@@ -114,7 +114,7 @@
       rows: (auto, auto),
       align: center,
       row-gutter: 10.0pt,
-      tiaoma.qrcode("https://aiven.io/tibs", options: (scale: 3.0)),
+      tiaoma.qrcode("https://go.aiven.io/pyconuk-tibs", options: (scale: 3.0)),
       text(size: 20pt)[https://aiven.io/tibs],
     )),
   )
@@ -1114,13 +1114,13 @@ final application.
 
     [
       Get a free trial of Aiven services at \
-      https://go.aiven.io/pyconuk-clip
+      https://go.aiven.io/pyconuk-clip-trial
 
       // STRONG NOTE TO SELF: Remember to create the shortlink for pyconuk-clip !!!
 
       Also, we're hiring! See https://aiven.io/careers
     ],
-    tiaoma.qrcode("https://go.aiven.io/pyconuk-clip", options: (scale: 2.35)),
+    tiaoma.qrcode("https://go.aiven.io/pyconuk-clip-trial", options: (scale: 2.35)),
 
     [
       Slides created using
