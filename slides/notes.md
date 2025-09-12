@@ -1,14 +1,14 @@
 # Notes
 
-The developer center “ancestor” to this code, using OpenSearch and
-~25,000 Unsplash images
-https://aiven.io/developer/opensearch-multimodal-search (this URL will 
-change, but should redirect to the new location, which may be in the
-OpenSearch workshop mentioned next)
+History:
 
-This workshop is based on the OpenSearch original, at
-https://github.com/Aiven-Labs/workshop-multimodal-search-CLIP-OpenSearch
-
+- This talk is based on the workshop in the parent directory of this repository.
+- That workshop is in turn based on the OpenSearch original, at
+  https://github.com/Aiven-Labs/workshop-multimodal-search-CLIP-OpenSearch
+- And that is inspired by an article in the Aiven developer center, using
+  OpenSearch and ~25,000 Unsplash images
+  https://aiven.io/developer/opensearch-multimodal-search
+  (this URL may change, but should redirect to the new location)
 
 ----
 
@@ -31,13 +31,23 @@ Texts are encoded
 
 Images are encoded
 
-Those encodings are then aligned in a shared embedding space, enabling the model
-to perform tasks that require understanding the relationship between images and
-text.
+Those encodings are then aligned in a shared embedding space, enabling the
+model to perform tasks that require understanding the relationship between 
+images and  text.
 This does mean it’s only going to do really well with text that falls within the
 text training sets.
 And of course all the normal caveats about bias, inclusivity, data range and so
 on always apply.
+
+Apparently trained on 400 million image-text pairs collected from the Internet.
+
+https://voxel51.com/blog/a-history-of-clip-model-training-data-advances
+Specifically, the contrastive approach means:
+- It's presented with paired image and text - those represent as close as 
+  posible in the embedding space
+- The model is incentivised to make unpaired inputs ("a photo of a car" and 
+  a picture of a dog) represent as far apart as possible
+And CLIP is used as the basis for other multimodal applications.
 
 **ViT-B/32**:  uses a Vision Transformer (ViT) as the image encoder, with an
 image patch size of 32 (larger patch size means fewer patches per image at a
