@@ -73,3 +73,9 @@ just pdf
 
 This talk and its related files are released under a [Creative Commons
 Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
+
+Postgres, PostgreSQL and the Slonik Logo are trademarks or registered
+trademarks of the PostgreSQL Community Association of Canada, and used with
+their permission.
+
+Other images are acknowledged in the slides.
