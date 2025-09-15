@@ -98,3 +98,21 @@ and
 
 * 2024 Voxel51 [A History of CLIP Model Training Data Advances](https://voxel51.com/blog/a-history-of-clip-model-training-data-advances)
 
+## Note on images in the `photos/` folder
+
+
+The images in the `photos/` directory came from Unsplash and have been reduced in size
+to make them fit within GitHub repository filesize limits.
+
+When the app is running and shows images, it uses the URL for the image in the
+GitHub repository in the `<img>` tag.
+
+This is not good practice for a production app, as GitHub is not intended to act
+as an image repository for web apps.
+
+We should instead store the images in a proper filestore, or even in a database
+(PostgreSQL or perhaps Valkey). But that would almost certainly require us to
+retrieve the image to local storage display, and we'd then need to make sure
+we didn't _keep_ them too long, as we don't have much local storage. This is
+the sort of design discussion that we'd need for anything beyond this MVP
+(minimum viable product).
