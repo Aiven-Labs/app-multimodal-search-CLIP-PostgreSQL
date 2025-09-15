@@ -322,10 +322,6 @@ final application.
 
 #slide[
   == How do we calculate the vectors?
-
-  Back in the early days of Natural Language Processing, this was done by hand.
-
-  Nowadays we use Machine Learning and especially Large Language Models.
 ]
 
 #slide[
