@@ -37,6 +37,197 @@
 
 // UNUSED SLIDES
 
+
+#slide[
+
+  == Why vectors?
+
+  Broadly, we can describe the characteristics of things with numbers.
+
+  For instance, we can describe colours with RGB values,\ or hotels with ratings.
+]
+
+// Do I want to show a second arrow, or a second diagram with two arrows
+// and the vector between them?
+#slide[
+  == RGB encoding as a 3d vector: `#e6cdb3`
+
+  #import "@preview/cetz:0.4.1"
+
+  #align(center)[
+    #cetz.canvas(
+      length: 15pt,
+      background: luma(240),
+      {
+        import cetz.draw: *
+        set-style(mark: (end: ">"))
+
+        line((0, 0, 0), (10, 0, 0), name: "blue", stroke: black)
+        line((0, 0, 0), (0, 10, 0), name: "red")
+        line((0, 0, 0), (0, 0, 10), name: "green")
+
+        content((12, 0, 0), text(fill: red)[ff,0,0])
+        content((0, 11, 0), text(fill: green)[0,ff,0])
+        content((1, 0, 12), text(fill: blue)[0,0,ff])
+
+        line((9, 0, 0), (9, 0, 7), mark: (end: none), stroke: green)
+        line((0, 0, 7), (9, 0, 7), mark: (end: none), stroke: green)
+
+        line((9, 0, 0), (9, 8, 0), mark: (end: none), stroke: green)
+        line((0, 8, 0), (9, 8, 0), mark: (end: none), stroke: green)
+
+        line((0, 0, 7), (0, 8, 7), mark: (end: none), stroke: green)
+        line((0, 8, 0), (0, 8, 7), mark: (end: none), stroke: green)
+
+        line((9, 8, 0), (9, 8, 7), mark: (end: none), stroke: green)
+        line((0, 8, 7), (9, 8, 7), mark: (end: none), stroke: green)
+        line((9, 0, 7), (9, 8, 7), mark: (end: none), stroke: green)
+
+        line((0, 0, 0), (9, 8, 7), stroke: (thickness: 5pt))
+
+        content((0.5, -1, 7), [b3])
+        content((-1, 8.5, 0), [cd])
+        content((9.5, -1, 0), [e6])
+
+        content((14, 9.5, 10), box(
+          fill: rgb(90%, 80%, 70%),
+          outset: 7pt,
+          radius: 5pt,
+        )[e6,cd,b3])
+      },
+    )
+  ]
+]
+
+#slide[
+
+  == We can do mathematics with vectors
+
+  We can compare their
+
+  - length
+  - direction
+
+  and we can do maths between vectors - for instance:
+
+  #grid(
+    columns: (auto, auto, auto),
+    rows: (auto, auto),
+    column-gutter: 5pt,
+    row-gutter: 20pt,
+    [Is #h(10pt)],
+    highlight(fill: luma(230))[the vector between colour 1 and colour 2],
+    [#h(10pt) _similar to_],
+
+    [ ],
+    [#highlight(fill: luma(230))[the vector between colour 3 and colour 4]],
+    [?],
+  )
+
+  /*
+  #quote(block: true)[
+    Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
+    _similar to_
+    #highlight(fill: luma(230))[the vector between colour 3 and colour 4]?
+  ]
+  */
+]
+
+#slide[
+  == How do we calculate the vectors?
+]
+
+#slide[
+
+  == Calculating the vectors by hand: early NLP
+
+  In early Natural Language Processing, words would be categorised by hand.
+
+  #align(center)[
+    #grid(
+      columns: (auto, auto, auto),
+      gutter: 10pt,
+      align: left,
+      [`king`], [#sym.arrow.r.stroked], [`[1.0, 1.0, 0.8, ...]`],
+      [`queen`], [#sym.arrow.r.stroked], [`[1.0, 0.0, 0.7, ...]`],
+      [`princess`], [#sym.arrow.r.stroked], [`[0.9, 0.0, 0.3, ...]`],
+    )
+  ]
+
+  gauging "importance", "gender", "typical age" and then other things
+
+  This doesn't scale well - but we do know what the "meanings" are, and we can
+  hope to spot bias
+]
+
+#slide[
+
+  == Calculating the vectors using ML
+
+  With ML, we can
+
+  - *train* a machine learning system
+  - to *"recognise"* that a thing belongs to particular categories.
+
+  And the "thing" can be more than just words
+
+  This is wonderful - but sometimes leads to surprising results, because we
+  don't know what the meanings *"chosen"* actually are
+]
+
+// Olena's grid of emojis
+#slide[
+  == Classifying emoji
+  #align(center)[
+    #grid(
+      columns: (auto, auto, auto),
+      align: horizon,
+      table(
+        align: right,
+        columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
+        rows: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
+        [ ], [0], [1], [2], [3], [4], [5],
+        [0], [👗], [ ], [ ], [ ], [ ], [🐶],
+        [1], [👠], [👟], [ ], [ ], [🐻], [ ],
+        [2], [ ], [ ], [ ], [ ], [ ], [ ],
+        [3], [💳], [💶], [ ], [ ], [ ], [ ],
+        [4], [ ], [ ], [ ], [ ], [ ], [ ],
+        [4], [ ], [ ], [ ], [ ], [ ], [🎸],
+      ),
+      grid.cell(inset: 0.5em, sym.arrow),
+      table(
+        align: right,
+        columns: (1.5em, 1.5em, 1.5em),
+        rows: (1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em),
+        [ ], [X], [Y],
+        [👗], [0], [0],
+        [👠], [0], [1],
+        [👟], [1], [1],
+        [🐶], [5], [0],
+        [🐻], [4], [1],
+        [💳], [0], [3],
+        [💶], [1], [3],
+        [🎸], [5], [5],
+      ),
+    )
+  ]
+]
+
+// TRY NOT USING THIS SLIDE
+// If I understand this correctly, this is actually doing the opposite of
+// what we're doing - it's taking an image and returning a corresponding text
+// or description
+// Do I actually want/need this slide, or is the previous one sufficient?
+#slide[
+  == Training CLIP: Create dataset classifier, predict...
+
+  #figure(
+    image("images/CLIP-training-overview-b.svg", width: 14em),
+    caption: text(size: 20pt)[source: https://github.com/openai/CLIP],
+  )
+]
+
+
 // Our images are in the GitHub repository, at
 // https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
 // but the files there are, well, files, so won't work in an `img` tag. Instead we need
