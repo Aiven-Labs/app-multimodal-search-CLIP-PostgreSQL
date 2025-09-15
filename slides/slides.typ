@@ -100,15 +100,13 @@
 
   Tibs (they / he)
 
+  #v(15pt)
+
   #grid(
-    columns: 2,
+    columns: (70%, 30%),
+    align: (top, horizon),
 
-    text(size: 20pt)[
-
-      21#super[st] September 2025, PyCon UK 2025
-
-      Slides available at https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides
-    ],
+    text(size: 22pt)[21#super[st] September 2025, PyCon UK 2025],
 
     align(right, grid(
       rows: (auto, auto),
@@ -133,9 +131,49 @@
       ),
       align(
         center + horizon,
-      )[_If we have the app,\ show the QR code\ and let people play_],
+      )[_If we have the app,\ show the QR code\ and let people play.\
+        Otherwise give a\ demo or play\ the sample video_],
     )
   ]
+]
+
+#slide[
+  == Software and slides
+
+  #v(20pt)
+
+  #grid(
+    columns: (auto, auto),
+    align: left,
+    column-gutter: 1em,
+
+    [
+      All the code is available at \
+      https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL,
+    ],
+
+    tiaoma.qrcode(
+      "https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL",
+      options: (scale: 2.1),
+    ),
+  )
+
+  #v(10pt)
+
+  #grid(
+    columns: (auto, auto),
+    align: left,
+    column-gutter: 1em,
+
+    tiaoma.qrcode(
+      "https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides/slides.pdf",
+      options: (scale: 1.9),
+    ),
+    [
+      The slides themselves are at \
+      https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides/slides.pdf,
+    ],
+  )
 ]
 
 /*
@@ -182,7 +220,7 @@ final application.
 #slide[
   == Agenda
 
-  - A brief introduction to LMM / vector embeddings / CLIP
+  - A brief introduction to LMM and OpenAI CLIP
   - Overview of how the app works
   - Setting up PostgreSQL
   - Calculating and storing image embeddings
@@ -192,10 +230,50 @@ final application.
 
 #slide[
   #align(horizon + center)[
-    #heading()[A brief introduction\ to LLM/LMM and \ vector embeddings]
+    #heading()[A brief introduction to\ LMM and OpenAI CLIP]
   ]
 ]
 
+#slide[
+  == I'm not going to explain vector embeddings
+
+  ...but you can watch my PyCon UK 2023 talk for a simple introduction.
+
+  #figure(caption: [How I used PostgreSQL® to find pictures of me at a party],
+  align(center)[
+    #grid(
+      columns: (auto, auto),
+      column-gutter: 3em,
+      row-gutter: 20pt,
+
+      image("images/tibs-pyconuk-2023.png"),
+
+      grid(
+        rows: 2,
+        row-gutter: 10pt,
+        align(horizon+center)[
+          #tiaoma.qrcode(
+            "https://www.youtube.com/watch?v=_FqKxKVJGWQ",
+            options: (scale: 3.0),
+          )
+        ],
+        align(center)[
+        #text(size: 20pt)[
+          #link("https://www.youtube.com/watch?v=_FqKxKVJGWQ")[
+            `https://www.youtube.com/watch` \
+            `?v=_FqKxKVJGWQ`
+          ]
+          ]
+        ],
+      ),
+    )
+    ]
+    )
+
+
+]
+
+/*
 // I like this slide - can I keep this slide? Even though I've used it before?
 #slide[
   == ... not an explanation of ML
@@ -306,12 +384,13 @@ final application.
     [Is #h(10pt)],
     highlight(fill: luma(230))[the vector between colour 1 and colour 2],
     [#h(10pt) _similar to_],
+
     [ ],
     [#highlight(fill: luma(230))[the vector between colour 3 and colour 4]],
     [?],
   )
 
-/*
+  /*
   #quote(block: true)[
     Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
     _similar to_
@@ -399,6 +478,7 @@ final application.
     )
   ]
 ]
+*/
 
 #slide[
   == Multimodal magic
@@ -587,6 +667,11 @@ final application.
   #align(center + horizon)[`create_table.py`]
 ]
 
+#set page(header: context [
+  #set text(size: 15pt, fill: gray)
+  #align(left)[`create_table.py`]
+])
+
 #slide[
   == Enable pgvector
 
@@ -619,6 +704,8 @@ final application.
   CLIP uses vectors with 512 elements
 ]
 
+#set page(header: context [])
+
 #slide[
   #align(horizon + center)[
     #heading()[Calculating and storing image embeddings]
@@ -626,6 +713,11 @@ final application.
 
   #align(center + horizon)[`process_images.py`]
 ]
+
+#set page(header: context [
+  #set text(size: 15pt, fill: gray)
+  #align(left)[`process_images.py`]
+])
 
 // For both text and image (so process_images.py and app.py)
 //
@@ -739,6 +831,8 @@ final application.
   See https://www.psycopg.org/psycopg3/docs/basic/copy.html for more
 ]
 
+#set page(header: context [])
+
 #slide[
   #align(horizon + center)[
     #heading()[Find some images]
@@ -746,6 +840,11 @@ final application.
     #align(center + horizon)[`find_images.py`]
   ]
 ]
+
+#set page(header: context [
+  #set text(size: 15pt, fill: gray)
+  #align(left)[`find_images.py`]
+])
 
 // Encode the text to compute the feature vector and normalize it
 // This is _very similar_ to what we do for the images
@@ -796,6 +895,8 @@ final application.
 
 ]
 
+#set page(header: context [])
+
 #slide[
   #align(horizon + center)[
     #heading()[Make an application]
@@ -803,6 +904,11 @@ final application.
 
   #align(center + horizon)[`app.py`]
 ]
+
+#set page(header: context [
+  #set text(size: 15pt, fill: gray)
+  #align(left)[`app.py` and `templates/`]
+])
 
 #slide[
   == GET the prompt
@@ -913,11 +1019,18 @@ final application.
 
 // ==================================================================
 
+#set page(header: context [])
+
 #slide[
   #set page(fill: yellow)
 
   == If there's time, talk about lazy loading the model at run time, and/or downloading the model during `Dockerfile` setup
 ]
+
+#set page(header: context [
+  #set text(size: 15pt, fill: gray)
+  #align(left)[`app.py`]
+])
 
 #slide[
   #align(horizon + center)[
@@ -1084,20 +1197,34 @@ final application.
 
 // ==================================================================
 
+#set page(header: context [])
+
 #slide[
+  == Aiven
 
-  #set page(fill: yellow)
+  I work for Aiven (https://aiven.io/)
 
-  == If there's time, discuss the Docker container
+  //  #align(center)[_Your AI-ready Open Source Data Platform_]
 
-  There won't be time...
+  #align(center)[
+    #grid(
+      align: left,
+      columns: 90%,
+      [
+        _Your AI-ready Open Source Data Platform_
+
+        Aiven is an AI-ready open source data platform that combines open-choice services
+        to rapidly stream, store and serve data across major cloud providers — simply and securely.
+      ]
+    )
+  ]
+
+  #v(1em)
+  If you want to run this app yourself, you can use our free version of
+  PostgreSQL, with `pgvector` already installed.
 ]
 
-// ==================================================================
 
-
-
-// Remember to update the shortlink go.aiven.io/tibs-signup
 #slide[
   == Fin
 
@@ -1116,7 +1243,9 @@ final application.
 
       Also, we're hiring! See https://aiven.io/careers
     ],
-    tiaoma.qrcode("https://go.aiven.io/pyconuk-clip-trial", options: (scale: 2.35)),
+    tiaoma.qrcode("https://go.aiven.io/pyconuk-clip-trial", options: (
+      scale: 2.35,
+    )),
 
     [
       Slides created using
@@ -1136,5 +1265,4 @@ final application.
       options: (scale: 2.0),
     ),
   )
-
 ]
