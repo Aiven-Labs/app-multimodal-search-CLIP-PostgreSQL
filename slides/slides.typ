@@ -619,6 +619,68 @@ final application.
   )
 ]
 
+#slide[
+  == What's in the repository
+
+  #text(size: 24pt)[https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL]
+
+  #grid(
+    columns: (auto, auto),
+    column-gutter: 90pt,
+
+   grid(
+    columns: (auto, auto),
+    column-gutter: 40pt,
+    [
+      - `app.py`
+      - `create_table.py`
+      - `find_images.py`
+      - `process_images.py`
+      - `templates/`
+    ],
+
+    [
+      - `photos/`
+      - `slides/`
+      - `Dockerfile`
+      - `LICENSE`
+      - `README.md`
+      - `requirements.txt`
+    ],
+  ),
+
+    tiaoma.qrcode(
+      "https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL",
+      options: (scale: 2.5),
+    ),
+
+  )
+]
+
+#slide[
+  == The `photos/` directory: 1000 pictures
+
+  #align(center)[
+    #image("images/photo-grid.png", width: 18em)
+  ]
+]
+
+#slide[
+  == Images from Unsplash
+
+  http://unsplash.com
+
+  #v(20pt)
+
+  - Provided to make the repository "self-sufficient"
+  - Images reduced in size to fit in GitHub
+  - The example app refers to them in GitHub (using `<img>`)
+
+  #v(20pt)
+
+  For production, don't use GitHub as an image cache!
+]
+
 // - `create_table.py`   -- create the table we need in PG
 // - `process_images.py` -- calculate the image embeddings and put them into PG
 // - `find_images.py`    -- for testing it all works
@@ -673,6 +735,17 @@ final application.
 ])
 
 #slide[
+  == Running things: Create the PostgreSQL table
+
+  ```shell
+  $ ./create_table.py
+  Enabling pgvector
+  Creating table
+  Done
+  ```
+]
+
+#slide[
   == Enable pgvector
 
   Enable the #link("https://github.com/pgvector/pgvector")[`pgvector`] extension:
@@ -688,6 +761,20 @@ final application.
 ]
 
 #slide[
+  == Make sure your vectors match
+
+  An encoding assigns (some sort of) "meaning" to each number in an embedding
+
+  - Don't try to match embeddings from one LLM against those from another
+
+  Different models use different vector sizes
+
+  - Don't try to match embeddings with different sizes
+
+  _CLIP uses vectors with 512 elements_
+]
+
+#slide[
   == Create our database table
 
   ```sql
@@ -696,12 +783,6 @@ final application.
       url text,
       embedding vector(512));
   ```
-
-  - `filename` is the name of the image file
-  - `url` is the URL that we can use to show it in an `<img>` tag
-  - `embedding` is the vector for this image
-
-  CLIP uses vectors with 512 elements
 ]
 
 #set page(header: context [])
@@ -718,6 +799,21 @@ final application.
   #set text(size: 15pt, fill: gray)
   #align(left)[`process_images.py`]
 ])
+
+#slide[
+  == Running things: Calculate and store the image embeddings
+
+  ```shell
+  $ ./process_images.py
+  Importing CLIP model ViT-B/32
+  Using cpu
+  Batch 0
+  Batch 100
+  ...
+  Batch 900
+  All embeddings indexed successfully.
+  ```
+]
 
 // For both text and image (so process_images.py and app.py)
 //
@@ -835,7 +931,7 @@ final application.
 
 #slide[
   #align(horizon + center)[
-    #heading()[Find some images]
+    #heading()[Check things are working\ Find some images]
 
     #align(center + horizon)[`find_images.py`]
   ]
@@ -845,6 +941,21 @@ final application.
   #set text(size: 15pt, fill: gray)
   #align(left)[`find_images.py`]
 ])
+
+#slide[
+  == Running things: `find_images.py`
+
+  ```shell
+  $ ./find_images.py
+  2025-09-15 16:15:36,875 __main__ INFO: Importing CLIP model
+  2025-09-15 16:15:36,875 __main__ INFO: Using cpu
+  2025-09-15 16:15:39,259 __main__ INFO: Searching for 'man jumping'
+  1: tmKn9xNHY6I.jpg
+  2: rmc8Wjr3-c8.jpg
+  3: A9vhHNsJG4Y.jpg
+  4: IW7yli35qDE.jpg
+  ```
+]
 
 // Encode the text to compute the feature vector and normalize it
 // This is _very similar_ to what we do for the images
@@ -911,6 +1022,29 @@ final application.
 ])
 
 #slide[
+  == Running things: Run the app
+
+  In development mode:
+  ```shell
+  $ fastapi dev app.py
+  ```
+
+  ...or we might use Docker or another container mechanism
+
+]
+
+#slide[
+
+  == The initial prompt
+
+  #align(horizon)[
+    #align(center)[
+      #image("images/app-start-page.png")
+    ]
+  ]
+]
+
+#slide[
   == GET the prompt
   ```python
   @app.get("/", response_class=HTMLResponse)
@@ -972,6 +1106,15 @@ final application.
   ```
 ]
 
+// And just to show what happens if I do a query too early
+#slide[
+  == CLIP model not loaded yet
+
+  #align(center)[
+    #image("images/app-CLIP-not-loaded.png")
+  ]
+]
+
 // Success - we have results, and our error message is empty
 #slide[
   == POST the results: Success
@@ -1015,6 +1158,16 @@ final application.
   	    <p>No results found</p>
   	{% endfor %}
   ```
+]
+
+#slide[
+  #align(center)[
+    #box(
+      image("images/app-man-jumping.png"),
+      clip: true,
+      inset: (bottom: -2em),
+    )
+  ]
 ]
 
 // ==================================================================
@@ -1153,51 +1306,24 @@ final application.
   ```
 ]
 
-// And just to show what happens if I do a query too early
-#slide[
-  == CLIP model not loaded yet
-
-  #align(center)[
-    #image("images/app-CLIP-not-loaded.png")
-  ]
-]
-
-#slide[
-  #align(center)[
-    #box(
-      image("images/app-man-jumping.png"),
-      clip: true,
-      inset: (bottom: -2em),
-    )
-  ]
-]
-
-
-// ==================================================================
-
-// We should instead store the images in a proper filestore, or even in a database
-// (PostgreSQL or perhaps Valkey). But that would almost certainly require us to
-// retrieve the image to local storage display, and we'd then need to make sure
-// we didn't _keep_ them too long, as we don't have much local storage. This is
-// the sort of design discussion that we'd need for anything beyond this MVP
-// (minimum viable product).
-#slide[
-  #set page(fill: yellow)
-
-  == If there's time, talk about "storing" the images on GitHub ("don't do that")
-
-  The images in the `photos/` directory came from Unsplash and have been reduced in size
-  to make them fit within GitHub repository filesize limits.
-
-  When the app is running and shows images, it uses the URL for the image in the
-  GitHub repository in the `<img>` tag.
-  This is not good practice for a production app, as GitHub is not intended to act
-  as an image repository for web apps.
-]
-
-// ==================================================================
-
 #set page(header: context [])
+
+#slide[
+  == Next steps?
+
+  - Try running it yourself!
+
+  - Use a different CLIP library, or different CLIP models
+
+  - Use different images
+
+  - Use a different image storage strategy, and cache images
+
+  - Cache query results (perhaps using Valkey) - does it make a difference?
+
+  - Look at OpenSearch instead of PostgreSQL
+
+]
 
 #slide[
   == Aiven
