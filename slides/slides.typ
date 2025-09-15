@@ -149,7 +149,7 @@
 
     [
       All the code is available at \
-      https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL,
+      https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL
     ],
 
     tiaoma.qrcode(
@@ -171,51 +171,10 @@
     ),
     [
       The slides themselves are at \
-      https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides/slides.pdf,
+      https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/slides/slides.pdf
     ],
   )
 ]
-
-/*
-#slide[
-== Possible agenda
-
-- If we have the app, show the QR code and let people play
-- Brief introduction to LMM / vector embeddings
-  - Brief introduction to multimodal stuff (magic!)
-  - Digression on OpenAI CLIP and choosing which implementation to use
-
-- Describe app structure / components
-  - We separate _preparing the database_ from _using the app_
-  - Explain some core code components
-
-_Is there any other code that is notable enough to talk about, given time?_
-  - Lazy loading the model at run time of the app, and/or downloading the model during `Dockerfile` setup
-  - "Storing" the images on GitHub ("don't do that") so they're easy to display in HTML
-  - _Show_ the GET / POST methods - or at least their outline/docs
-
-- If we have the app, then _maybe_ show the Dockerfile and how to run the app
-]
-*/
-
-/*
-From the abstract
-
-The original LLMs (large language models) worked with text, making it possible to use a
-phrase to search for documents with a similar meaning. Later models addressed other media,
-for instance, allowing comparison of images. And now we have multi-modal models, like
-OpenAI's CLIP, which can work with images and text interchangably.
-
-I'll give a quick introduction to vector search and CLIP,
-talk through setting up the necessary table in PostgreSQL®,
-walk through a script to calculate the embeddings of the chosen images,
-and store them in the database, and another script that takes a search text
-and uses pgvector to find matching images in the database.
-
-I'll then show how you can use FastAPI and HTMX to quickly make a web app
-with a basic form. Merging the "find images" code into that then gives the
-final application.
-*/
 
 #slide[
   == Agenda
@@ -239,246 +198,40 @@ final application.
 
   ...but you can watch my PyCon UK 2023 talk for a simple introduction.
 
-  #figure(caption: [How I used PostgreSQL® to find pictures of me at a party],
-  align(center)[
-    #grid(
-      columns: (auto, auto),
-      column-gutter: 3em,
-      row-gutter: 20pt,
-
-      image("images/tibs-pyconuk-2023.png"),
-
-      grid(
-        rows: 2,
-        row-gutter: 10pt,
-        align(horizon+center)[
-          #tiaoma.qrcode(
-            "https://www.youtube.com/watch?v=_FqKxKVJGWQ",
-            options: (scale: 3.0),
-          )
-        ],
-        align(center)[
-        #text(size: 20pt)[
-          #link("https://www.youtube.com/watch?v=_FqKxKVJGWQ")[
-            `https://www.youtube.com/watch` \
-            `?v=_FqKxKVJGWQ`
-          ]
-          ]
-        ],
-      ),
-    )
-    ]
-    )
-
-
-]
-
-/*
-// I like this slide - can I keep this slide? Even though I've used it before?
-#slide[
-  == ... not an explanation of ML
-
   #figure(
-    image("images/markus-winkler-f57lx37DCM4-unsplash.jpg", width: 55%),
-    caption: text(size: 15pt)[
-      Photo by #link("https://unsplash.com/@markuswinkler")[Markus Winkler]
-      on #link("https://unsplash.com/photos/f57lx37DCM4")[Unsplash]
+    caption: ["How I used PostgreSQL® to find pictures of me at a party"],
+    align(center)[
+      #grid(
+        columns: (auto, auto),
+        column-gutter: 3em,
+        row-gutter: 20pt,
+
+        image("images/tibs-pyconuk-2023.png"),
+
+        grid(
+          rows: 2,
+          row-gutter: 10pt,
+          align(horizon + center)[
+            #tiaoma.qrcode(
+              "https://www.youtube.com/watch?v=_FqKxKVJGWQ",
+              options: (scale: 3.0),
+            )
+          ],
+          align(center)[
+            #text(size: 20pt)[
+              #link("https://www.youtube.com/watch?v=_FqKxKVJGWQ")[
+                `https://www.youtube.com/watch` \
+                `?v=_FqKxKVJGWQ`
+              ]
+            ]
+          ],
+        ),
+      )
     ],
   )
+
+
 ]
-
-
-#slide[
-
-  == Vectors and embeddings
-
-  ML people talk about vectors and embeddings and vector embeddings.
-
-  - A vector is an array of numbers representing a direction and a size.
-
-  - "Embedding" means representing something in a computer.
-
-  So a *vector embedding* is
-
-  - an array of numbers representing a direction and size
-  - stored in a computer.
-]
-
-#slide[
-
-  == Why vectors?
-
-  Broadly, we can describe the characteristics of things with numbers.
-
-  For instance, we can describe colours with RGB values,\ or hotels with ratings.
-]
-
-// Do I want to show a second arrow, or a second diagram with two arrows
-// and the vector between them?
-#slide[
-  == RGB encoding as a 3d vector: `#e6cdb3`
-
-  #import "@preview/cetz:0.4.1"
-
-  #align(center)[
-    #cetz.canvas(
-      length: 15pt,
-      background: luma(240),
-      {
-        import cetz.draw: *
-        set-style(mark: (end: ">"))
-
-        line((0, 0, 0), (10, 0, 0), name: "blue", stroke: black)
-        line((0, 0, 0), (0, 10, 0), name: "red")
-        line((0, 0, 0), (0, 0, 10), name: "green")
-
-        content((12, 0, 0), text(fill: red)[ff,0,0])
-        content((0, 11, 0), text(fill: green)[0,ff,0])
-        content((1, 0, 12), text(fill: blue)[0,0,ff])
-
-        line((9, 0, 0), (9, 0, 7), mark: (end: none), stroke: green)
-        line((0, 0, 7), (9, 0, 7), mark: (end: none), stroke: green)
-
-        line((9, 0, 0), (9, 8, 0), mark: (end: none), stroke: green)
-        line((0, 8, 0), (9, 8, 0), mark: (end: none), stroke: green)
-
-        line((0, 0, 7), (0, 8, 7), mark: (end: none), stroke: green)
-        line((0, 8, 0), (0, 8, 7), mark: (end: none), stroke: green)
-
-        line((9, 8, 0), (9, 8, 7), mark: (end: none), stroke: green)
-        line((0, 8, 7), (9, 8, 7), mark: (end: none), stroke: green)
-        line((9, 0, 7), (9, 8, 7), mark: (end: none), stroke: green)
-
-        line((0, 0, 0), (9, 8, 7), stroke: (thickness: 5pt))
-
-        content((0.5, -1, 7), [b3])
-        content((-1, 8.5, 0), [cd])
-        content((9.5, -1, 0), [e6])
-
-        content((14, 9.5, 10), box(
-          fill: rgb(90%, 80%, 70%),
-          outset: 7pt,
-          radius: 5pt,
-        )[e6,cd,b3])
-      },
-    )
-  ]
-]
-
-#slide[
-
-  == We can do mathematics with vectors
-
-  We can compare their
-
-  - length
-  - direction
-
-  and we can do maths between vectors - for instance:
-
-  #grid(
-    columns: (auto, auto, auto),
-    rows: (auto, auto),
-    column-gutter: 5pt,
-    row-gutter: 20pt,
-    [Is #h(10pt)],
-    highlight(fill: luma(230))[the vector between colour 1 and colour 2],
-    [#h(10pt) _similar to_],
-
-    [ ],
-    [#highlight(fill: luma(230))[the vector between colour 3 and colour 4]],
-    [?],
-  )
-
-  /*
-  #quote(block: true)[
-    Is #highlight(fill: luma(230))[the vector between colour 1 and colour 2]
-    _similar to_
-    #highlight(fill: luma(230))[the vector between colour 3 and colour 4]?
-  ]
-  */
-]
-
-#slide[
-  == How do we calculate the vectors?
-]
-
-#slide[
-
-  == Calculating the vectors by hand: early NLP
-
-  In early Natural Language Processing, words would be categorised by hand.
-
-  #align(center)[
-    #grid(
-      columns: (auto, auto, auto),
-      gutter: 10pt,
-      align: left,
-      [`king`], [#sym.arrow.r.stroked], [`[1.0, 1.0, 0.8, ...]`],
-      [`queen`], [#sym.arrow.r.stroked], [`[1.0, 0.0, 0.7, ...]`],
-      [`princess`], [#sym.arrow.r.stroked], [`[0.9, 0.0, 0.3, ...]`],
-    )
-  ]
-
-  gauging "importance", "gender", "typical age" and then other things
-
-  This doesn't scale well - but we do know what the "meanings" are, and we can
-  hope to spot bias
-]
-
-#slide[
-
-  == Calculating the vectors using ML
-
-  With ML, we can
-
-  - *train* a machine learning system
-  - to *"recognise"* that a thing belongs to particular categories.
-
-  And the "thing" can be more than just words
-
-  This is wonderful - but sometimes leads to surprising results, because we
-  don't know what the meanings *"chosen"* actually are
-]
-
-// Olena's grid of emojis
-#slide[
-  == Classifying emoji
-  #align(center)[
-    #grid(
-      columns: (auto, auto, auto),
-      align: horizon,
-      table(
-        align: right,
-        columns: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-        rows: (1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em, 1.5em),
-        [ ], [0], [1], [2], [3], [4], [5],
-        [0], [👗], [ ], [ ], [ ], [ ], [🐶],
-        [1], [👠], [👟], [ ], [ ], [🐻], [ ],
-        [2], [ ], [ ], [ ], [ ], [ ], [ ],
-        [3], [💳], [💶], [ ], [ ], [ ], [ ],
-        [4], [ ], [ ], [ ], [ ], [ ], [ ],
-        [4], [ ], [ ], [ ], [ ], [ ], [🎸],
-      ),
-      grid.cell(inset: 0.5em, sym.arrow),
-      table(
-        align: right,
-        columns: (1.5em, 1.5em, 1.5em),
-        rows: (1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em, 1.3em),
-        [ ], [X], [Y],
-        [👗], [0], [0],
-        [👠], [0], [1],
-        [👟], [1], [1],
-        [🐶], [5], [0],
-        [🐻], [4], [1],
-        [💳], [0], [3],
-        [💶], [1], [3],
-        [🎸], [5], [5],
-      ),
-    )
-  ]
-]
-*/
 
 #slide[
   == Multimodal magic
@@ -537,20 +290,19 @@ final application.
   )
 ]
 
-/* TRY NOT USING THIS SLIDE
-// If I understand this correctly, this is actually doing the opposite of
-// what we're doing - it's taking an image and returning a corresponding text
-// or description
-// Do I actually want/need this slide, or is the previous one sufficient?
 #slide[
-  == Training CLIP: Create dataset classifier, predict...
+  == Make sure your vectors match
 
-  #figure(
-    image("images/CLIP-training-overview-b.svg", width: 14em),
-    caption: text(size: 20pt)[source: https://github.com/openai/CLIP],
-  )
+  An encoding assigns (some sort of) "meaning" to each number in an embedding
+
+  - Don't try to match embeddings from one LLM against those from another
+
+  Different models use different vector sizes
+
+  - Don't try to match embeddings with different sizes
+
+  _CLIP uses vectors with 512 elements_
 ]
-*/
 
 #slide[
   #align(horizon + center)[
@@ -622,38 +374,39 @@ final application.
 #slide[
   == What's in the repository
 
-  #text(size: 24pt)[https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL]
+  #text(
+    size: 24pt,
+  )[https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL]
 
   #grid(
     columns: (auto, auto),
     column-gutter: 90pt,
 
-   grid(
-    columns: (auto, auto),
-    column-gutter: 40pt,
-    [
-      - `app.py`
-      - `create_table.py`
-      - `find_images.py`
-      - `process_images.py`
-      - `templates/`
-    ],
+    grid(
+      columns: (auto, auto),
+      column-gutter: 40pt,
+      [
+        - `app.py`
+        - `create_table.py`
+        - `find_images.py`
+        - `process_images.py`
+        - `templates/`
+      ],
 
-    [
-      - `photos/`
-      - `slides/`
-      - `Dockerfile`
-      - `LICENSE`
-      - `README.md`
-      - `requirements.txt`
-    ],
-  ),
+      [
+        - `photos/`
+        - `slides/`
+        - `Dockerfile`
+        - `LICENSE`
+        - `README.md`
+        - `requirements.txt`
+      ],
+    ),
 
     tiaoma.qrcode(
       "https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL",
       options: (scale: 2.5),
     ),
-
   )
 ]
 
@@ -704,7 +457,7 @@ final application.
 //
 // - Note that `psycopg` is now `psycopg3`, which is a lot nicer than the
 //   older `psycopg2`
-// - There are various CLIP options we might choose - this is "the original"?
+// - There are various CLIP options we might choose - this is "the original"
 //   - `git+https://github.com/openai/CLIP.git`
 // - We need Torch to handle ...
 #slide[
@@ -761,20 +514,6 @@ final application.
 ]
 
 #slide[
-  == Make sure your vectors match
-
-  An encoding assigns (some sort of) "meaning" to each number in an embedding
-
-  - Don't try to match embeddings from one LLM against those from another
-
-  Different models use different vector sizes
-
-  - Don't try to match embeddings with different sizes
-
-  _CLIP uses vectors with 512 elements_
-]
-
-#slide[
   == Create our database table
 
   ```sql
@@ -783,6 +522,10 @@ final application.
       url text,
       embedding vector(512));
   ```
+
+  #v(2em)
+
+  _Remember, CLIP uses vectors with 512 elements_
 ]
 
 #set page(header: context [])
@@ -884,8 +627,6 @@ final application.
   #sym.arrow.r.stroked `"[0.01886262744665146, ..., -0.028690829873085022]"`
 ]
 
-// See https://www.postgresql.org/docs/current/sql-copy.html for COPY .. FROM STDIN
-// See https://www.psycopg.org/psycopg3/docs/basic/copy.html for how to use it in Python
 #slide[
   == Write data rows to PostgreSQL
   ```python
@@ -1034,13 +775,12 @@ final application.
 ]
 
 #slide[
-
   == The initial prompt
 
-  #align(horizon)[
-    #align(center)[
-      #image("images/app-start-page.png")
-    ]
+  #v(2em)
+
+  #align(center)[
+    #image("images/app-start-page.png")
   ]
 ]
 
@@ -1076,6 +816,21 @@ final application.
   ```
 ]
 
+// We'll cheat by re-using the "CLIP not loaded" image and cropping off the bottom...
+#slide[
+  == Making a query
+
+  #v(2em)
+
+  #align(center)[
+    #box(
+      image("images/app-CLIP-not-loaded.png"),
+      clip: true,
+      inset: (bottom: -2em),
+    )
+  ]
+]
+
 // Type hinting and logging left out for simplicity
 #slide[
   == POST the results
@@ -1104,15 +859,6 @@ final application.
       }
   )
   ```
-]
-
-// And just to show what happens if I do a query too early
-#slide[
-  == CLIP model not loaded yet
-
-  #align(center)[
-    #image("images/app-CLIP-not-loaded.png")
-  ]
 ]
 
 // Success - we have results, and our error message is empty
@@ -1172,14 +918,6 @@ final application.
 
 // ==================================================================
 
-#set page(header: context [])
-
-#slide[
-  #set page(fill: yellow)
-
-  == If there's time, talk about lazy loading the model at run time, and/or downloading the model during `Dockerfile` setup
-]
-
 #set page(header: context [
   #set text(size: 15pt, fill: gray)
   #align(left)[`app.py`]
@@ -1193,6 +931,16 @@ final application.
   #align(center + horizon)[`app.py`]
 ]
 
+#slide[
+  == CLIP model not loaded yet
+
+  #v(2em)
+
+  #align(center)[
+    #image("images/app-CLIP-not-loaded.png")
+  ]
+]
+
 // For both text and image (so process_images.py and app.py)
 #slide[
   == Load the open CLIP model - we saw this earlier
@@ -1204,7 +952,9 @@ final application.
   ```
   ...but this downloads the CLIP model at runtime.
 
-  What if we lazy load it?
+  #align(right)[(although it does then cache it)]
+
+  Can we do better?
 ]
 
 #slide[
@@ -1250,7 +1000,7 @@ final application.
 // code checking to see if `clip_model.model` is set, and assuming that
 // in that case it won't look at the `error_string`.
 #slide[
-  == Load the model - now in a function
+  == Load the model with a function
   ```python
   def load_clip_model():
       try:
@@ -1304,6 +1054,21 @@ final application.
   # Join things up
   app = FastAPI(lifespan=lifespan, redirect_slashes=False)
   ```
+]
+
+#slide[
+  == Better model loading
+
+  1. As fastapi starts up, it starts the model loading
+
+    (and then carries on doing its thing)
+
+  2. If the model file is already there, that completes quickly
+
+  3. Otherwise, the separate thread loads the model
+
+  4. Queries give a warning if the model is not loaded yet
+
 ]
 
 #set page(header: context [])
