@@ -150,7 +150,7 @@ GitHub filesize limits for a repository.
    in a container context.
 
 3. At one point I was running the Dockerised application in an HTTPS context.
-   In order to make the HTMX redirect to `/search_form` also use HTTPS, I
+   In order to make the redirect to `/search_form` also use HTTPS, I
    needed to tell FastAPI `redirect_slashes=FALSE` (and make sure that the
    `/search_form` in the `templates/index.html` file didn't end with `/`).
 
