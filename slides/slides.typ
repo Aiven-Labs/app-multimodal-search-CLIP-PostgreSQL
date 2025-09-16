@@ -454,6 +454,8 @@
 
 // - typing to make our code better
 // - fastapi to give us a web app
+//   (this uses starlette to provide the HTMLResponse class, and do the
+//   HTML templating)
 // - jinja2 to allow us to create our HTML page template
 // - python-dotenv to support taking environment variables from a .env file,
 //   or from the environment
