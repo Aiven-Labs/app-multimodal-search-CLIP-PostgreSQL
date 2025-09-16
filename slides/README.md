@@ -1,7 +1,5 @@
 # Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector
 
-> **Note** Slides are still in draft.
-
 Slides and notes for the talk "Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector", a talk (to be) given at
 [PyCon UK 2025](https://2025.pyconuk.org/)
 on [Sunday, September 21st
@@ -32,8 +30,8 @@ repository!)_
 ## Documents here
 
 [slides.typ](slides.typ) is the Typst source code for the slides. The PDF for
-the slides is [slides.pdf](slides.pdf). This version of the talk is aimed at 30
-minutes or less.
+the slides is [slides.pdf](slides.pdf). This version of the talk is aimed at
+25 - 30 minutes.
 
 [notes.md](notes.md) are the notes I made when writing the talk.
 
