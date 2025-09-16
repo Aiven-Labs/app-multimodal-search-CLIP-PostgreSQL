@@ -131,8 +131,11 @@
       ),
       align(
         center + horizon,
-      )[_If we have the app,\ show the QR code\ and let people play.\
-        Otherwise give a\ demo or play\ the sample video_],
+      )[
+        _This is where I\ show you a demo_
+        /*_If we have the app,\ show the QR code\ and let people play.\
+        Otherwise give a\ demo or play\ the sample video_*/
+      ],
     )
   ]
 ]
@@ -804,7 +807,7 @@
 
   (the interesting bits!)
   ```html
-  <p>{{ clip_model_status }}</p>
+  <p></p>
 
   <form hx-post="/search_form" hx-target="#response">
   	<input type="text" name="search_text"
