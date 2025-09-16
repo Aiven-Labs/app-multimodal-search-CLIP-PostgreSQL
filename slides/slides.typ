@@ -477,6 +477,8 @@
   - `clip` from OpenAI to talk to the CLIP model
 
   - `torch` to handle some ML related computations // try to explain this better
+
+  - and Pillow (`PIL`) to handle images
 ]
 
 #slide[
@@ -583,6 +585,12 @@
 
   model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
   ```
+
+  #v(30pt)
+
+  - `model` -- a `torch.nn.Module`
+
+  - `preprocess` -- a `Callable[ [PIL.Image], torch.Tensor ]`
 ]
 
 #slide[
