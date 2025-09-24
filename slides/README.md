@@ -1,6 +1,6 @@
 # Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector
 
-Slides and notes for the talk "Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector", a talk (to be) given at
+Slides and notes for the talk "Type text, find pictures: an app using CLIP, PostgreSQL® and pgvector", a talk given at
 [PyCon UK 2025](https://2025.pyconuk.org/)
 on [Sunday, September 21st
 2025](https://pretalx.com/pyconuk-2025/talk/VTHPZK/)
@@ -8,7 +8,7 @@ by [Tibs](https://aiven.io/Tibs).
 
 This is a talk about the application that lives in this repository.
 
-When the video recording is released, a link will be provided.
+See the [video recording on youtube](https://www.youtube.com/watch?v=p3JThptSYos).
 
 
 ## Abstract

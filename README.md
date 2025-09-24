@@ -2,9 +2,12 @@
 
 A Python web web app that searches for images matching a given text
 
+> **Note:** The [slides/](slides/) directory contains slides for a 25
+> minute talk about this workshop, as given at PyCon UK 2025.
+
 ## Prepare the database
 
-> **Note** you need to do this stage whether you're going to run the app
+> **Note:** You need to do this stage whether you're going to run the app
 > locally or via Docker.
 
 First, create a virtual environment to keep package installation local to this directory
