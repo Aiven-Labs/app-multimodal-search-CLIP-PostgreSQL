@@ -11,11 +11,11 @@ import os
 
 from pathlib import Path
 
-import clip
 import psycopg
 import torch
 
 from dotenv import load_dotenv
+from transformers import CLIPProcessor, CLIPModel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,32 +28,42 @@ load_dotenv()
 SERVICE_URI = os.getenv("DATABASE_URL")
 
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print(f'Using device {DEVICE} for model calculations')
+
 # Load the open CLIP model
 # If we download it remotely, it will default to being cached in ~/.cache/clip
-LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-MODEL_NAME = 'ViT-B/32'
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MODEL_NAME = 'openai/clip-vit-base-patch32'
+LOCAL_MODEL = Path(f'./models/{MODEL_NAME}').absolute()
 if LOCAL_MODEL.exists():
-    logger.info(f'Importing CLIP model from {LOCAL_MODEL}')
-    logger.info(f'Using {DEVICE}')
-    model, preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+    print(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
+    model = CLIPModel.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL).to(DEVICE)
+    processor = CLIPProcessor.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL)
 else:
-    logger.info('Importing CLIP model')
-    logger.info(f'Using {DEVICE}')
-    model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
+    print(f'Importing CLIP model {MODEL_NAME}')
+    model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
+    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+
 
 INDEX_NAME = "photos"  # Update with your index name
 
 
 def get_single_embedding(text):
     with torch.no_grad():
-        # Encode the text to compute the feature vector and normalize it
-        text_input = clip.tokenize([text]).to(DEVICE)
-        text_features = model.encode_text(text_input)
-        text_features /= text_features.norm(dim=-1, keepdim=True)
+        inputs = processor(
+            text=[text],
+            return_tensors='pt',
+            padding=True,           # do we need this?
+        ).to(DEVICE)
 
-    # Return the feature vector
-    return text_features.cpu().numpy()[0]
+        # Compute the feature vectors
+        features = model.get_text_features(**inputs)
+
+        # Normalise the embeddings, to make them easier to compare
+        features /= features.norm(dim=-1, keepdim=True)
+
+    # Return the feature vector (there is just the one)
+    return features.numpy()[0]
 
 
 def vector_to_string(embedding):

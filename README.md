@@ -23,7 +23,7 @@ source venv/bin/activate
 
 Install the Python packages we need
 ```shell
-python3 -m pip install -r requirements.txt
+python3 -m pip install .
 ```
 
 Create your PostgreSQL® database. An Aiven for PostgreSQL service will do very
@@ -83,16 +83,8 @@ source venv/bin/activate
 
 Install the Python packages we need
 ```shell
-python3 -m pip install -r requirements.txt
+python3 -m pip install .
 ```
-
-> **Note** Sometimes we've seen the Python `clip.load` function fail to
-> download the CLIP model, presumably due to the source server being busy. The
-> code here will use a local copy of the model if it's available. To make that
-> local copy:
->
->     mkdir models
->     curl https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt --output models/ViT-B-32.pt
 
 If you set up a `.env` file containing the PostgreSQL service URI, then you're
 ready to run the app. Otherwise, you can set a local environmment variable,
@@ -135,6 +127,18 @@ GitHub filesize limits for a repository.
 > directly from this GitHub repository. This is not good practice for a
 > production app, as GitHub is not intended to act as an image repository for
 > web apps.
+
+## History - which CLIP package
+
+The original version of this code used the Python CLIP library from
+https://github.com/openai/CLIP. Unfortunaltely, that has a `setup.py` that
+requires `pkg_resources`, which is removed in Python 3.12 and setuptools 82.
+
+Rather than try to cope with legacy code issues, the code here has been
+changed to use HuggingFace transformers instead, still with the same
+CLIP model (HuggingFace call it `openai/clip-vit-base-patch32` instead of
+`ViT-B/32`). This should also make it easier to change the code to use
+different models.
 
 ## Interesting things I learnt
 

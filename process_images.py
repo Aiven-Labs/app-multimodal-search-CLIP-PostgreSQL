@@ -7,12 +7,12 @@ import os
 
 from pathlib import Path
 
-import clip
 import psycopg
 import torch
 
 from dotenv import load_dotenv
 from PIL import Image
+from transformers import CLIPProcessor, CLIPModel
 
 
 SERVICE_URI = os.getenv("DATABASE_URL")
@@ -24,19 +24,22 @@ if not SERVICE_URI:
     import sys
     sys.exit('No value found for environment variable DATABASE_URL (the PG database)')
 
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+print(f'Using device {DEVICE} for model calculations')
+
 # Load the open CLIP model
 # If we download it remotely, it will default to being cached in ~/.cache/clip
-LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-MODEL_NAME = 'ViT-B/32'
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MODEL_NAME = 'openai/clip-vit-base-patch32'
+LOCAL_MODEL = Path(f'./models/{MODEL_NAME}').absolute()
 if LOCAL_MODEL.exists():
     print(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
-    print(f'Using {DEVICE}')
-    model, preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+    model = CLIPModel.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL).to(DEVICE)
+    processor = CLIPProcessor.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL)
 else:
     print(f'Importing CLIP model {MODEL_NAME}')
-    print(f'Using {DEVICE}')
-    model, preprocess = clip.load(MODEL_NAME, device=DEVICE)
+    model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
+    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 
 index_name = "photos"  # Update with your index name
 
@@ -61,16 +64,23 @@ def compute_clip_features(photos_batch):
     # Load all the photos from the files
     photos = [Image.open(photo_file) for photo_file in photos_batch]
 
-    # Preprocess all photos
-    photos_preprocessed = torch.stack([preprocess(photo) for photo in photos]).to(DEVICE)
+    with torch.no_grad():  # We don't need gradients for inference, so can save memory
+        # Preprocess all photos - resize and normalise
+        inputs = processor(
+            images=photos,
+            return_tensors='pt',
+            padding=True,           # do we need this?
+        ).to(DEVICE)
 
-    with torch.no_grad():
-        # Encode the photos batch to compute the feature vectors and normalize them
-        photos_features = model.encode_image(photos_preprocessed)
-        photos_features /= photos_features.norm(dim=-1, keepdim=True)
+        # Compute the feature vectors
+        features = model.get_image_features(**inputs)
 
-    # Transfer the feature vectors back to the CPU and convert to numpy
-    return photos_features.cpu().numpy()
+        # Normalise the embeddings, to make them easier to compare
+        features /= features.norm(dim=-1, keepdim=True)
+
+
+    # Convert the feature vectors back to numpy
+    return features.numpy()
 
 
 def index_embeddings_to_postgres(data):

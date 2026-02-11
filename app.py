@@ -9,7 +9,6 @@ import os
 
 from typing import Annotated, Callable, Union
 
-import clip
 import psycopg
 import torch
 import PIL
@@ -23,6 +22,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from transformers import CLIPProcessor, CLIPModel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,8 +39,8 @@ if not SERVICE_URI:
 # At which point we rather hope we found the URL for our PG database...
 
 
-LOCAL_MODEL = Path('./models/ViT-B-32.pt').absolute()
-MODEL_NAME = 'ViT-B/32'
+MODEL_NAME = 'openai/clip-vit-base-patch32'
+LOCAL_MODEL = Path(f'./models/{MODEL_NAME}').absolute()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -64,18 +64,21 @@ def load_clip_model():
     # If we download it remotely, it will default to being cached in ~/.cache/clip
     try:
         if LOCAL_MODEL.exists():
-            logger.info(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
+            print(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
             logger.info(f'Using {DEVICE}')
-            clip_model.model, clip_model.preprocess = clip.load(MODEL_NAME, device=DEVICE, download_root=LOCAL_MODEL.parent)
+            clip_model.model = CLIPModel.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL).to(DEVICE)
+            clip_model.processor = CLIPProcessor.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL)
         else:
-            logger.info(f'Importing CLIP model {MODEL_NAME}')
+            print(f'Importing CLIP model {MODEL_NAME}')
             logger.info(f'Using {DEVICE}')
-            clip_model.model, clip_model.preprocess = clip.load(MODEL_NAME, device=DEVICE)
+            clip_model.model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
+            clip_model.processor = CLIPProcessor.from_pretrained(MODEL_NAME)
     except Exception as exc:
         clip_model.error_string = 'Unable to load CLIP model - please restart the application'
         logger.exception(clip_model.error_string)
     else:
         logger.info('CLIP model imported')
+        clip_model.error_string = 'Something unexpected has gone wrong'
 
 
 @asynccontextmanager
@@ -95,13 +98,20 @@ async def lifespan(app: FastAPI):
 
 def get_single_embedding(text):
     with torch.no_grad():
-        # Encode the text to compute the feature vector and normalize it
-        text_input = clip.tokenize([text]).to(DEVICE)
-        text_features = clip_model.model.encode_text(text_input)
-        text_features /= text_features.norm(dim=-1, keepdim=True)
+        inputs = clip_model.processor(
+            text=[text],
+            return_tensors='pt',
+            padding=True,           # do we need this?
+        ).to(DEVICE)
 
-    # Return the feature vector
-    return text_features.cpu().numpy()[0]
+        # Compute the feature vectors
+        features = clip_model.model.get_text_features(**inputs)
+
+        # Normalise the embeddings, to make them easier to compare
+        features /= features.norm(dim=-1, keepdim=True)
+
+    # Return the feature vector (there is just the one)
+    return features.numpy()[0]
 
 
 def vector_to_string(embedding):
