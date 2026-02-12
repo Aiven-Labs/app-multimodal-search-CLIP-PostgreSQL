@@ -90,6 +90,15 @@ If you set up a `.env` file containing the PostgreSQL service URI, then you're
 ready to run the app. Otherwise, you can set a local environmment variable,
 `DATABASE_URL`, to that same URI.
 
+If you want, you can download a local copy of the model to `./models/` with
+```shell
+./model_download.py
+```
+This means that the app will use that copy, otherwise it will look for a
+cached version (for instance, in `~/.cache/huggingface`) and if there isnt
+one, will download the model itself, which will cause a delay before the app
+can find images.
+
 Run the webapp locally using fastapi
 ```shell
 fastapi dev app.py
@@ -131,40 +140,49 @@ GitHub filesize limits for a repository.
 ## History - which CLIP package
 
 The original version of this code used the Python CLIP library from
-https://github.com/openai/CLIP. Unfortunaltely, that has a `setup.py` that
+https://github.com/openai/CLIP. Unfortunately, that has a `setup.py` that
 requires `pkg_resources`, which is removed in Python 3.12 and setuptools 82.
 
 Rather than try to cope with legacy code issues, the code here has been
-changed to use HuggingFace transformers instead, still with the same
-CLIP model (HuggingFace call it `openai/clip-vit-base-patch32` instead of
-`ViT-B/32`). This should also make it easier to change the code to use
-different models.
+changed to use HuggingFace transformers instead, still with the same CLIP
+model (HuggingFace call it `openai/clip-vit-base-patch32` instead of
+`ViT-B/32`). As a benefit, this should also make it easier to change the code
+to use different models.
 
 ## Interesting things I learnt
 
-1. When writing the Dockerfile, the default `FROM python:3.11` downloads much
-   of Ubuntu, which we don't need. We can vastly reduce the size of the image
-   by using `FROM python:3.11-slim`, at the cost of needing to install `git`
-   (needed by the requirements to download
-   `git+https://github.com/openai/CLIP.git`) and `curl`. See
-   https://hub.docker.com/_/python for more about the Python images available.
+### Use the right distribution
 
-2. In the Docker context, we deliberately download the CLIP image file
-   ```
-   RUN curl https://openaipublic.azureedge.net/clip/models/.../ViT-B-32.pt --output /app/models/ViT-B-32.pt
-   ```
-   so that the file is ready for the app when it runs. This makes a lot of sense
-   in a container context.
+When writing the Dockerfile, the default `FROM python:3.11` downloads much
+of Ubuntu, which we don't need. We can vastly reduce the size of the image
+by using `FROM python:3.11-slim`, at the cost of needing to install `git`
+(needed by the requirements to download
+`git+https://github.com/openai/CLIP.git`) and `curl`. See
+https://hub.docker.com/_/python for more about the Python images available.
 
-3. At one point I was running the Dockerised application in an HTTPS context.
-   In order to make the redirect to `/search_form` also use HTTPS, I
-   needed to tell FastAPI `redirect_slashes=FALSE` (and make sure that the
-   `/search_form` in the `templates/index.html` file didn't end with `/`).
+### Only download the model files we need
 
-   I found the information at [FastAPI redirection for trailing slash returns
-   non-SSL
-   link](https://stackoverflow.com/questions/63511413/fastapi-redirection-for-trailing-slash-returns-non-ssl-link)
-   very helpful, particularly [this
+In the Docker context, we deliberately download the model first,
+so that the app starts in a more deterministic state (there isn't a
+possibly long wait while the Python script loads the model from the
+internet).
+
+However, we don't need *all* of the files within a HuggingFace model,
+and ignoring some of them can save a useful amount of space (and time).
+
+See `model_info.py` and `download_model.py` for more information.
+
+### Using `redirect_slashes=FALSE` in FastAPI
+
+At one point I was running the Dockerised application in an HTTPS context.
+In order to make the redirect to `/search_form` also use HTTPS, I
+needed to tell FastAPI `redirect_slashes=FALSE` (and make sure that the
+`/search_form` in the `templates/index.html` file didn't end with `/`).
+
+I found the information at [FastAPI redirection for trailing slash returns
+non-SSL
+link](https://stackoverflow.com/questions/63511413/fastapi-redirection-for-trailing-slash-returns-non-ssl-link)
+very helpful, particularly [this
    comment](https://stackoverflow.com/questions/63511413/fastapi-redirection-for-trailing-slash-returns-non-ssl-link#:~:text=Since%20FastAPI%20version%200.98.0%20the%20framework%20provides%20a%20way%20to%20disable%20the%20redirect%20behaviour%20by%20setting%20the%20redirect_slashes%20parameter%20to%20False%2C%20which%20is%20True%20by%20default.%20This%20works%20for%20the%20whole%20application%20as%20well%20as%20for%20individual%20routers.).
 
 
@@ -173,11 +191,11 @@ different models.
 * The [Workshop: Searching for images with vector search - OpenSearch and CLIP
   model](https://github.com/Aiven-Labs/workshop-multimodal-search-CLIP-OpenSearch)
   which does (essentially) the same thing, but using OpenSearch and Jupyter
-  notebooks.
+  notebooks, and the OpenAI CLIP model.
 
 * [Building a movie recommendation system with Tensorflow and
   PGVector](https://github.com/Aiven-Labs/pgvector-tensorflow-movie-recommendations-workshop)
-  which searches text, and produces a web app using JavaScript
+  which searches text, and produces a web app using JavaScript.
 
 For help understanding how to use HTMX
 * [Using HTMX with FastAPI](https://testdriven.io/blog/fastapi-htmx/)

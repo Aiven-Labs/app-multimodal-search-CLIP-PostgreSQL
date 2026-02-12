@@ -12,6 +12,7 @@ dependencies = [
   "psycopg[binary]",
   "python-dotenv",
   "torch",
+  "huggingface_hub",
   #"transformers",
   # Version 5 of the HuggingFace transformers package introduced a
   # breaking change to the output of get_image_features. For now

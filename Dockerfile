@@ -4,23 +4,19 @@ WORKDIR /app
 
 COPY ./pyproject.toml /app
 
-### We need git to get the HuggingFace, and 'slim' doesn't include it
-##RUN apt-get update \
-##&& apt-get install -y --no-install-recommends git \
-##&& apt-get purge -y --auto-remove \
-##&& rm -rf /var/lib/apt/lists/*
-
 RUN python3 -m pip install --no-cache-dir .
 
 COPY ./app.py /app
+COPY ./model_info.py /app
+COPY ./download_model.py /app
 
 RUN mkdir -p /app/templates
 COPY ./templates/index.html  /app/templates/index.html
 COPY ./templates/images.html /app/templates/images.html
 
-### Get the model so that it's ready / cached when the app starts
-##RUN mkdir -p /app/models/openai
-##RUN cd /app/models/openai; git clone https://huggingface.co/openai/clip-vit-base-patch32
+# Get the model so that it's ready when the app starts
+RUN mkdir -p /app/models/
+RUN /app/download_model.py
 
 
 EXPOSE 3000

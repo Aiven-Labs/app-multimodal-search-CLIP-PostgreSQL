@@ -24,6 +24,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from transformers import CLIPProcessor, CLIPModel
 
+from model_info import *
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(name)s %(levelname)s: %(message)s',
@@ -39,8 +41,6 @@ if not SERVICE_URI:
 # At which point we rather hope we found the URL for our PG database...
 
 
-MODEL_NAME = 'openai/clip-vit-base-patch32'
-LOCAL_MODEL = Path(f'./models/{MODEL_NAME}').absolute()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -61,16 +61,21 @@ clip_model = Model(None, None, "CLIP model not loaded yet - try again soon")
 
 def load_clip_model():
     """Load the open CLIP model"""
-    # If we download it remotely, it will default to being cached in ~/.cache/clip
+
+    logger.info(f'Using device {DEVICE} for model calculations')
+
     try:
-        if LOCAL_MODEL.exists():
-            print(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
-            logger.info(f'Using {DEVICE}')
-            clip_model.model = CLIPModel.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL).to(DEVICE)
-            clip_model.processor = CLIPProcessor.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL)
+        # Load the open CLIP model
+        # If we're being run from our Dockerfile, then the model should already
+        # have been downloaded to MODEL_DIR, so let's check for that first.
+        # If that directory doesn't exist, fall back to the normal "download and
+        # cache" approach, when the model will be cached in ~/.cache/clip.
+        if MODEL_DIR.exists():
+            logger.info(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
+            clip_model.model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
+            clip_model.processor = CLIPProcessor.from_pretrained(MODEL_DIR)
         else:
-            print(f'Importing CLIP model {MODEL_NAME}')
-            logger.info(f'Using {DEVICE}')
+            logger.info(f'Importing CLIP model {MODEL_NAME} from HuggingFace')
             clip_model.model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
             clip_model.processor = CLIPProcessor.from_pretrained(MODEL_NAME)
     except Exception as exc:
@@ -78,6 +83,8 @@ def load_clip_model():
         logger.exception(clip_model.error_string)
     else:
         logger.info('CLIP model imported')
+        # We're not expecting this to show up if the model is loaded,
+        # but the original message would be misleading
         clip_model.error_string = 'Something unexpected has gone wrong'
 
 
@@ -91,7 +98,6 @@ async def lifespan(app: FastAPI):
     logger.info('Async load task starting')
     blocking_loader = asyncio.to_thread(load_clip_model)
     asyncio.create_task(blocking_loader)
-    ###load_clip_model()
     yield
     # We don't have an unload step
 
