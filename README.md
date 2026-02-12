@@ -95,7 +95,7 @@ If you want, you can download a local copy of the model to `./models/` with
 ./model_download.py
 ```
 This means that the app will use that copy, otherwise it will look for a
-cached version (for instance, in `~/.cache/huggingface`) and if there isnt
+cached version (for instance, in `~/.cache/huggingface`) and if there isn't
 one, will download the model itself, which will cause a delay before the app
 can find images.
 

@@ -14,6 +14,9 @@ from dotenv import load_dotenv
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 
+# Get our model name and directories
+from model_info import *
+
 
 SERVICE_URI = os.getenv("DATABASE_URL")
 if not SERVICE_URI:
@@ -29,21 +32,19 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f'Using device {DEVICE} for model calculations')
 
 # Load the open CLIP model
-# If we download it remotely, it will default to being cached in ~/.cache/clip
-MODEL_NAME = 'openai/clip-vit-base-patch32'
-LOCAL_MODEL = Path(f'./models/{MODEL_NAME}').absolute()
-if LOCAL_MODEL.exists():
-    print(f'Importing CLIP model {MODEL_NAME} from {LOCAL_MODEL.parent}')
-    model = CLIPModel.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL).to(DEVICE)
-    processor = CLIPProcessor.from_pretrained(pretrained_model_name_or_path=LOCAL_MODEL)
+# If we ran `download_model.py` earlier, then our model will already be
+# in MODEL_DIR, otherwise it will be looked for in the cache (typically
+# `~/.cache/huggingface`) and downloaded to there if necessary.
+if MODEL_DIR.exists():
+    print(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
+    model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
+    processor = CLIPProcessor.from_pretrained(MODEL_DIR)
 else:
-    print(f'Importing CLIP model {MODEL_NAME}')
+    print(f'Importing CLIP model {MODEL_NAME} from HuggingFace')
     model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
     processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 
 index_name = "photos"  # Update with your index name
-
-# Notebook 2: process and upload videos
 
 # Path to the directory containing photos
 image_dir = "photos"

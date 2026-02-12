@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from transformers import CLIPProcessor, CLIPModel
 
+# Get our model name and directories
 from model_info import *
 
 logging.basicConfig(
