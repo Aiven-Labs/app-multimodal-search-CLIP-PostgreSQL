@@ -47,7 +47,7 @@ else:
 index_name = "photos"  # Update with your index name
 
 # Path to the directory containing photos
-image_dir = "photos"
+image_dir = "../photos"
 
 # Our images are in the GitHub repository, at
 # https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
