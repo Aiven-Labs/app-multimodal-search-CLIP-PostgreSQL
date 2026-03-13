@@ -15,4 +15,4 @@ RUN mkdir -p /app/models/
 RUN /app/download_model.py
 
 EXPOSE 8000
-CMD [ "fastapi", "run", "app.py", "--port", "8000" ]
+CMD [ "fastapi", "run", "clip_app.py", "--port", "8000" ]
