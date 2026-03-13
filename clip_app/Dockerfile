@@ -14,5 +14,5 @@ COPY ./download_model.py /app
 RUN mkdir -p /app/models/
 RUN /app/download_model.py
 
-EXPOSE 3000
-CMD [ "fastapi", "run", "app.py", "--port", "3000" ]
+EXPOSE 8000
+CMD [ "fastapi", "run", "app.py", "--port", "8000" ]
