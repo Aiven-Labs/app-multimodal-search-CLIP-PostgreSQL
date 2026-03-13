@@ -1,0 +1,23 @@
+[project]
+name = "multimodal-CLIP-demo_CLIP-app"
+version = "2026.3.13"
+readme = "README.md"
+license = "Apache-2.0"
+
+dependencies = [
+  "typing",
+  "fastapi[standard]",
+  "pillow",  # we'll need this when we support reading images from a URL or file path
+  "torch",
+  "huggingface_hub",
+  #"transformers",
+  # Version 5 of the HuggingFace transformers package introduced a
+  # breaking change to the output of get_image_features. For now
+  # stick with an older version.
+  "transformers==4.57.3",  # try an old version of transformers
+
+]
+
+[tool.setuptools.packages]
+# We've just got our clip_app.py at the top level, nothing to look for
+find = {namespaces = false}
