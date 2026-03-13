@@ -1,5 +1,5 @@
 [project]
-name = "multimodal-CLIP-demo_CLIP-app"
+name = "multimodal-CLIP-demo__CLIP-app"
 version = "2026.3.13"
 readme = "README.md"
 license = "Apache-2.0"

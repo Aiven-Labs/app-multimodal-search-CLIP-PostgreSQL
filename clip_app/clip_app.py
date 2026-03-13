@@ -171,6 +171,12 @@ class EmbeddingResponse(BaseModel):
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 
+# Add a health check endpoint for use by compose
+@app.get("/health")
+async def healthcheck():
+    return {"status": "ok"}
+
+
 # Example usage:
 #   curl -X 'POST' \
 #   'http://127.0.0.1:8000/embed' \
