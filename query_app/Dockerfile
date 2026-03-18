@@ -20,8 +20,10 @@ COPY ./templates/images.html /app/templates/images.html
 # could get the query interface up quickly, and have this running in
 # parallel, and the user would get some sort of "still populating
 # the database" response if they tried asking something too early.)
-RUN /app/create_table.py
-RUN /app/process_images.py
+
+# AT THE MOMENT the table and images are already there...
+#RUN /app/create_table.py
+#RUN /app/process_images.py
 
 
 EXPOSE 3000

@@ -37,7 +37,7 @@ if not SERVICE_URI:
 MODEL_NAME = os.environ.get('MODEL_NAME', 'openai/clip-vit-base-patch32')
 
 # Get the URL for our CLIP embedding service
-CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE', 'http://localhost:8000/embed')
+CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 
 
 # And the response
@@ -53,20 +53,22 @@ class EmbeddingResponse(BaseModel):
 async def get_text_embedding(text):
     try:
         response = httpx.post(
-            CLIP_SERVICE_URL,
+            f'{CLIP_SERVICE_URL}/embed',
             json={
                 "model_name": MODEL_NAME,
                 "datatype": "text",
                 "values": [text],
             },
         )
+        logger.info(f"Response from CLIP: {response.text}")
         response.raise_for_status()
 
         data = response.json()
         return data["embeddings"][0]["embedding"]
-    except Exception as e:
-        logger.error(f'Error getting text embedding: {e}')
-        raise
+    except Exception as exc:
+        logger.error(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+        #raise Exception('Unable to get text embedding')
+        raise Exception(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
 
 
 def vector_to_string(embedding):
@@ -94,8 +96,12 @@ async def search_for_matches(text):
                 )
                 return cur.fetchall()
     except Exception as exc:
-        print(f'{exc.__class__.__name__}: {exc}')
-        return []
+        logger.error(f'{exc.__class__.__name__}: {exc}')
+        raise Exception(f'Unable to query database')
+        # I tried including the actual exception in the raised error, which is
+        # what the user will see on the query page, but it's at best confusing,
+        # so let's not do that
+        #raise Exception(f'Error querying database: {exc}')
 
 
 app = FastAPI(redirect_slashes=False)
