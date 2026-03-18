@@ -174,6 +174,7 @@ app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 # Add a health check endpoint for use by compose
 @app.get("/health")
 async def healthcheck():
+    logger.info('Healthcheck requested')
     return {"status": "ok"}
 
 
@@ -190,10 +191,19 @@ async def healthcheck():
 # (I like including `-i` (`--include`) to show the status code, although
 # it does show other stuff I don't normally want as much. Approaches to
 # show *just* the status code and response are generally clunkier.)
+#
+# QUESTION: Do we *need* to take multiple values?
+#           It seems natural for batching multiple image requests, but does
+#           the imply too large a JSON response, such that we're actually
+#           better off with multiple single queries? (given they're local
+#           and so should be moderately fast)
+# QUESTION: If we do, do we also want a single value version, since that's
+#           always what we want for text prompts, at least at the moment.
 @app.post("/embed", response_model=EmbeddingResponse)
-async def process_inference(payload: EmbeddingRequest) -> EmbeddingResponse:
-    """Given a list of text promprt or of image file URLs, return the corresponding embeddings.
+async def process_embedding_request(payload: EmbeddingRequest) -> EmbeddingResponse:
+    """Given a list of text prompts or of image file URLs, return the corresponding embeddings.
     """
+    logger.info(f'Processing embedding request: {payload}')
     if payload.model_name != MODEL_NAME:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,  # essentially a validation error
@@ -209,7 +219,6 @@ async def process_inference(payload: EmbeddingRequest) -> EmbeddingResponse:
     if payload.datatype == "text":
         embeddings = get_text_embedding(payload.values)
     elif payload.datatype == "image":
-        logger.info(f'Value/URL is {payload.values!r}')
         images = []
         for image in payload.values:
             images_data = await get_image_data(image)
