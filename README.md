@@ -1,5 +1,8 @@
 # An app for searching for images matching a text, using CLIP, PostgreSQL® and pgvector
 
+> **NOTE:** This README still describes the `main` branch, and not this
+> branch, where we're splitting the app up and using a compose file.
+
 A Python web web app that searches for images matching a given text
 
 > **Note:** The [slides/](slides/) directory contains slides for a 25
@@ -101,7 +104,7 @@ can find images.
 
 Run the webapp locally using fastapi
 ```shell
-fastapi dev app.py
+fastapi dev clip_app.py
 ```
 
 Go to http://127.0.0.1:8000 in a web browser, and request a search.
