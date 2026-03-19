@@ -50,7 +50,6 @@ async def get_text_embedding(text) -> List[float]:
                 "value": text,
             },
         )
-        logger.info(f"Response from CLIP: {response.text}")
         response.raise_for_status()
 
         data = response.json()
@@ -86,7 +85,7 @@ async def search_for_matches(text):
                 )
                 return cur.fetchall()
     except Exception as exc:
-        logger.error(f'{exc.__class__.__name__}: {exc}')
+        logger.error(f'Unable to query database {exc.__class__.__name__}: {exc}')
         raise Exception(f'Unable to query database')
         # I tried including the actual exception in the raised error, which is
         # what the user will see on the query page, but it's at best confusing,
