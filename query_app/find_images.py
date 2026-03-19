@@ -9,14 +9,10 @@ actually working
 import logging
 import os
 
+import httpx
 import psycopg
-import torch
 
 from dotenv import load_dotenv
-from transformers import CLIPProcessor, CLIPModel
-
-# Get our model name and directories
-from model_info import *
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,52 +22,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-SERVICE_URI = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Get our model name
+MODEL_NAME = os.environ.get('MODEL_NAME', 'openai/clip-vit-base-patch32')
+
+# Get the URL for our CLIP embedding service
+CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-print(f'Using device {DEVICE} for model calculations')
+def get_text_embedding(text) -> list[float]:
+    try:
+        response = httpx.post(
+            f'{CLIP_SERVICE_URL}/embed',
+            json={
+                "model_name": MODEL_NAME,
+                "datatype": "text",
+                "value": text,
+            },
+        )
+        response.raise_for_status()
 
-# Load the open CLIP model
-# If we're being run from our Dockerfile, then the model should already
-# have been downloaded to MODEL_DIR, so let's check for that first.
-# If that directory doesn't exist, fall back to the normal "download and
-# cache" approach.
-if MODEL_DIR.exists():
-    print(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
-    model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
-    processor = CLIPProcessor.from_pretrained(MODEL_DIR)
-else:
-    print(f'Importing CLIP model {MODEL_NAME} from HuggingFace')
-    model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
-    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
-
-
-INDEX_NAME = "photos"  # Update with your index name
-
-
-def get_single_embedding(text):
-    with torch.no_grad():
-        inputs = processor(
-            text=[text],
-            return_tensors='pt',
-            padding=True,           # do we need this?
-        ).to(DEVICE)
-
-        # Compute the feature vectors
-        features = model.get_text_features(**inputs)
-
-        # Normalise the embeddings, to make them easier to compare
-        features /= features.norm(dim=-1, keepdim=True)
-
-    # Return the feature vector (there is just the one)
-    return features.numpy()[0]
+        data = response.json()
+        return data["embedding"]
+    except Exception as exc:
+        logger.error(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+        raise Exception(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
 
 
 def vector_to_string(embedding):
     """Convert our (ndarry) embedding vector into a string that SQL can use.
     """
-    vector_str = ", ".join(str(x) for x in embedding.tolist())
+    vector_str = ", ".join(str(x) for x in embedding)
     vector_str = f'[{vector_str}]'
     return vector_str
 
@@ -89,13 +71,13 @@ def search_for_matches(text):
     * <=> - cosine distance
     * <+> - L1 distance (added in 0.7.0)
     """
-    vector = get_single_embedding(text)
+    vector = get_text_embedding(text)
 
     embedding_string = vector_to_string(vector)
 
     # Perform search
     try:
-        with psycopg.connect(SERVICE_URI) as conn:
+        with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT * FROM pictures ORDER BY embedding <-> %s LIMIT 4;",
@@ -104,13 +86,19 @@ def search_for_matches(text):
                 rows = cur.fetchall()
                 return [row[0] for row in rows]
     except Exception as exc:
-        print(f'{exc.__class__.__name__}: {exc}')
+        logger.error(f'{exc.__class__.__name__}: {exc}')
         return []
 
+def main():
+    text_input = "man jumping"  # Provide your text input here
+    logger.info(f'Searching for {text_input!r}')
+    matches = search_for_matches(text_input)
 
-text_input = "man jumping"  # Provide your text input here
-logger.info(f'Searching for {text_input!r}')
-matches = search_for_matches(text_input)
+    for index, filename in enumerate(matches):
+        logger.info(f'{index+1}: {filename}')
 
-for index, filename in enumerate(matches):
-    print(f'{index+1}: {filename}')
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as exc:
+        print(exc)
