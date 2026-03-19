@@ -26,11 +26,11 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
     # Try the .env file
     load_dotenv()
-    SERVICE_URI = os.getenv("DATABASE_URL")
+    DATABASE_URL = os.getenv("DATABASE_URL")
 # At which point we rather hope we found the URL for our PG database...
 
 # Get our model name
@@ -40,31 +40,21 @@ MODEL_NAME = os.environ.get('MODEL_NAME', 'openai/clip-vit-base-patch32')
 CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 
 
-# And the response
-class ItemResult(BaseModel):
-    embedding: List[float]
-    length: int
-
-class EmbeddingResponse(BaseModel):
-    embeddings: List[ItemResult]
-    count: int
-
-
-async def get_text_embedding(text):
+async def get_text_embedding(text) -> List[float]:
     try:
         response = httpx.post(
             f'{CLIP_SERVICE_URL}/embed',
             json={
                 "model_name": MODEL_NAME,
                 "datatype": "text",
-                "values": [text],
+                "value": text,
             },
         )
         logger.info(f"Response from CLIP: {response.text}")
         response.raise_for_status()
 
         data = response.json()
-        return data["embeddings"][0]["embedding"]
+        return data["embedding"]
     except Exception as exc:
         logger.error(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
         #raise Exception('Unable to get text embedding')
@@ -88,7 +78,7 @@ async def search_for_matches(text):
 
     # Perform search
     try:
-        with psycopg.connect(SERVICE_URI) as conn:
+        with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT filename, url FROM pictures ORDER BY embedding <-> %s LIMIT 4;",

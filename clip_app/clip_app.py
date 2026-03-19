@@ -5,6 +5,7 @@
 
 import asyncio
 import logging
+import json
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -108,7 +109,10 @@ async def get_image_data(url: str) -> ImageFile:
 
     async with httpx.AsyncClient() as client:
         # Retrieve the URL
-        response = await client.get(url)
+        response = await client.get(
+            url,
+            follow_redirects=True,  # For instance, we know that we use GitHub URLs that redirect
+        )
         response.raise_for_status()
 
         # Turn the bytes into a "file like" object for PIL
@@ -117,10 +121,10 @@ async def get_image_data(url: str) -> ImageFile:
         return Image.open(image_bytes)
 
 
-def get_image_embedding(images: Sequence[ImageFile]) -> torch.Tensor:
+def get_image_embedding(image_data: ImageFile) -> List[float]:
     with torch.no_grad():
         inputs = clip_model.processor(
-            images=images,
+            images=[image_data],
             return_tensors='pt',
             padding=True,           # do we need this?
         ).to(DEVICE)
@@ -132,13 +136,13 @@ def get_image_embedding(images: Sequence[ImageFile]) -> torch.Tensor:
         features /= features.norm(dim=-1, keepdim=True)
 
     # Return the feature vector
-    return features.numpy()
+    return features.numpy()[0].tolist()
 
 
-def get_text_embedding(texts: Sequence[str]) -> torch.Tensor:
+def get_text_embedding(text: str) -> List[float]:
     with torch.no_grad():
         inputs = clip_model.processor(
-            text=texts,
+            text=[text],
             return_tensors='pt',
             padding=True,           # do we need this?
         ).to(DEVICE)
@@ -150,23 +154,18 @@ def get_text_embedding(texts: Sequence[str]) -> torch.Tensor:
         features /= features.norm(dim=-1, keepdim=True)
 
     # Return the feature vector
-    return features.numpy()
+    return features.numpy()[0].tolist()
 
 
 # Our query structure
 class EmbeddingRequest(BaseModel):
     model_name: str
     datatype: Literal["text", "image"]
-    values: List[str]
+    value: str
 
-# And the response
-class ItemResult(BaseModel):
-    embedding: List[float]
-    length: int
 
 class EmbeddingResponse(BaseModel):
-    embeddings: List[ItemResult]
-    count: int
+    embedding: List[float]
 
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
@@ -186,19 +185,12 @@ async def healthcheck():
 #   -d '{
 #   "model_name": "openai/clip-vit-base-patch32",
 #   "datatype": "text",
-#   "values": ["A photo of a sunset", "Man jumping"]
+#   "value": "Man jumping"
 #   }'
 # (I like including `-i` (`--include`) to show the status code, although
 # it does show other stuff I don't normally want as much. Approaches to
 # show *just* the status code and response are generally clunkier.)
 #
-# QUESTION: Do we *need* to take multiple values?
-#           It seems natural for batching multiple image requests, but does
-#           the imply too large a JSON response, such that we're actually
-#           better off with multiple single queries? (given they're local
-#           and so should be moderately fast)
-# QUESTION: If we do, do we also want a single value version, since that's
-#           always what we want for text prompts, at least at the moment.
 @app.post("/embed", response_model=EmbeddingResponse)
 async def process_embedding_request(payload: EmbeddingRequest) -> EmbeddingResponse:
     """Given a list of text prompts or of image file URLs, return the corresponding embeddings.
@@ -217,13 +209,10 @@ async def process_embedding_request(payload: EmbeddingRequest) -> EmbeddingRespo
 
     embeddings = []
     if payload.datatype == "text":
-        embeddings = get_text_embedding(payload.values)
+        embedding = get_text_embedding(payload.value)
     elif payload.datatype == "image":
-        images = []
-        for image in payload.values:
-            images_data = await get_image_data(image)
-            images.append(images_data)
-        embeddings = get_image_embedding(images)
+        image_data = await get_image_data(payload.value)
+        embedding = get_image_embedding(image_data)
     else:
         # This should never occur, but just in case...
         raise HTTPException(
@@ -231,9 +220,10 @@ async def process_embedding_request(payload: EmbeddingRequest) -> EmbeddingRespo
             detail=f'"datatype" {payload.datatype} is neither text nor image',
         )
 
-    return {
-        "embeddings": [ {"embedding": e, "length": len(e)} for e in embeddings ],
-        "count": len(embeddings),
-    }
+    result = {"embedding": embedding}
+
+    logger.info(f'Rough response size estimate {len(json.dumps(result))}')
+
+    return result
 
 
