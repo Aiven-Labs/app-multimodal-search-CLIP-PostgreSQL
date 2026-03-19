@@ -3,85 +3,81 @@
 """Calculate embeddings for our images, and upload them to PostgreSQL
 """
 
+import logging
 import os
+import sys
 
 from pathlib import Path
 
+import httpx
 import psycopg
-import torch
+import psycopg.errors
 
 from dotenv import load_dotenv
-from PIL import Image
-from transformers import CLIPProcessor, CLIPModel
-
-# Get our model name and directories
-from model_info import *
 
 
-SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(name)s %(levelname)s: %(message)s',
+)
+
+logger = logging.getLogger(__name__)
+
+# httpx will log all GET and POST requests at level INFO, which is a bit much,
+# so let's disable that
+logging.getLogger("httpx").setLevel(logging.ERROR)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
     # Try the .env file
     load_dotenv()
-    SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
+    DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
     import sys
     sys.exit('No value found for environment variable DATABASE_URL (the PG database)')
 
+# Get our model name
+MODEL_NAME = os.environ.get('MODEL_NAME', 'openai/clip-vit-base-patch32')
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-print(f'Using device {DEVICE} for model calculations')
+# Get the URL for our CLIP embedding service
+CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 
-# Load the open CLIP model
-# If we ran `download_model.py` earlier, then our model will already be
-# in MODEL_DIR, otherwise it will be looked for in the cache (typically
-# `~/.cache/huggingface`) and downloaded to there if necessary.
-if MODEL_DIR.exists():
-    print(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
-    model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
-    processor = CLIPProcessor.from_pretrained(MODEL_DIR)
-else:
-    print(f'Importing CLIP model {MODEL_NAME} from HuggingFace')
-    model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
-    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 
 index_name = "photos"  # Update with your index name
 
 # Path to the directory containing photos
-image_dir = "../photos"
+image_dir = Path("./photos").resolve()
 
 # Our images are in the GitHub repository, at
 # https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
-# but the files there are, well, files, so won't work in an `img` tag. Instead we need
+# but the files there are not meant to be accessed as HTTP resources, so we need
 # to refer to the raw content. This is OK for a demo, but should not be used in
 # production, as GitHub is not really intended for this purpose!
 # (and yes, this should not be hard coded, either)
-PHOTOS_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/refs/heads/main/photos/'
+PHOTOS_URL_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/refs/heads/main/photos'
 
 # Batch size for processing images and indexing embeddings
 batch_size = 100
 
 
-def compute_clip_features(photos_batch):
-    # Load all the photos from the files
-    photos = [Image.open(photo_file) for photo_file in photos_batch]
+def compute_clip_features(photo_file_path: str) -> list[float]:
+    try:
+        response = httpx.post(
+            f'{CLIP_SERVICE_URL}/embed',
+            json={
+                "model_name": MODEL_NAME,
+                "datatype": "image",
+                "value": photo_file_path,
+            },
+        )
+        response.raise_for_status()
 
-    with torch.no_grad():  # We don't need gradients for inference, so can save memory
-        # Preprocess all photos - resize and normalise
-        inputs = processor(
-            images=photos,
-            return_tensors='pt',
-            padding=True,           # do we need this?
-        ).to(DEVICE)
-
-        # Compute the feature vectors
-        features = model.get_image_features(**inputs)
-
-        # Normalise the embeddings, to make them easier to compare
-        features /= features.norm(dim=-1, keepdim=True)
-
-
-    # Convert the feature vectors back to numpy
-    return features.numpy()
+        data = response.json()
+        return data["embedding"]
+    except Exception as exc:
+        logger.error(f'Error getting image embeddings from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+        #raise Exception('Unable to get text embedding')
+        raise Exception(f'Error getting image embeddings from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
 
 
 def index_embeddings_to_postgres(data):
@@ -95,50 +91,94 @@ def index_embeddings_to_postgres(data):
     the use of COPY.
     """
     try:
-        with psycopg.connect(SERVICE_URI) as conn:
+        with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 with cur.copy('COPY pictures (filename, url, embedding) FROM STDIN') as copy:
                     for row in data:
                         copy.write_row(row)
     except Exception as exc:
-        print(f'{exc.__class__.__name__}: {exc}')
+        logger.error(f'{exc.__class__.__name__}: {exc}')
+        raise
 
 
-def vector_to_string(embedding):
+def data_already_exists(file_name: str) -> bool:
+    """Make a quick check to see if we've already got a record for this file.
+    """
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT filename FROM pictures WHERE filename = %s;",
+                    (file_name,),
+                )
+                results = cur.fetchall()
+                return len(results) > 0
+    except Exception as exc:
+        logger.error(f'Unable to query database {exc.__class__.__name__}: {exc}')
+        raise Exception(f'Unable to query database')
+
+
+def vector_to_string(embedding: list[float]) -> str:
     """Convert our (ndarry) embedding vector into a string that SQL can use.
     """
-    vector_str = ", ".join(str(x) for x in embedding.tolist())
+    vector_str = ", ".join(str(x) for x in embedding)
     vector_str = f'[{vector_str}]'
     return vector_str
 
 
-# Iterate over images and process them in batches
+def main():
+    # Iterate over images and process them in batches
 
-data = []
+    # Ideally we'd upload photos via an endpoint on the query app (which would
+    # also allow us to give users a page where they could enter image URLs to
+    # upload). For the moment, we're just going to use a pre-generated list of
+    # the photos in the `photos` directory in the GitHub repository, the same
+    # directory that PHOTOS_URL_BASE references, and do it all by hand.
 
-# Process images in batches
-image_files = os.listdir(image_dir)
-for i in range(0, len(image_files), batch_size):
-    print(f'Batch {i}')
-    batch_files = image_files[i:i+batch_size]
-    batch_urls = [f'{PHOTOS_BASE}/{file}' for file in batch_files]
+    # The image_names.txt file is in the same directory as this file...
+    running_dir = Path(__file__).parent.resolve()
+    image_names_file = running_dir / 'image_names.txt'
+    with open(image_names_file) as fd:
+        image_file_names = fd.read().splitlines()
 
-    # Compute embeddings for the batch of images
-    batch_file_paths = [os.path.join(image_dir, file) for file in batch_files]
-    batch_embeddings = compute_clip_features(batch_file_paths)
+    # If the data is already in the database, then we don't want to run again
+    # So let's look for the _last_ filename
+    if data_already_exists(image_file_names[-1]):
+        logger.info("Data is already in the database")
+        return
 
-    # Create data dictionary for indexing
-    for file_name, file_url, embedding in zip(batch_files, batch_urls, batch_embeddings):
-        data.append((file_name, file_url, vector_to_string(embedding)))
+    data = []
 
-    # Check if we have enough data to index
-    if len(data) >= batch_size:
+    # Process images in batches
+    for i in range(0, len(image_file_names), batch_size):
+        logger.info(f'Batch {i}')
+        batch_file_names = image_file_names[i:i+batch_size]
+        batch_file_urls = [f'{PHOTOS_URL_BASE}/{name}' for name in batch_file_names]
+
+        # Create data dictionary for indexing
+        for file_name, file_url in zip(batch_file_names, batch_file_urls):
+            embedding = compute_clip_features(file_url)
+            data.append((file_name, file_url, vector_to_string(embedding)))
+
+        # Check if we have enough data to index
+        if len(data) >= batch_size:
+            index_embeddings_to_postgres(data)
+            data = []
+
+    # Index any remaining data
+    if len(data) > 0:
+        logger.info('Remaining embeddings')
         index_embeddings_to_postgres(data)
-        data = []
 
-# Index any remaining data
-if len(data) > 0:
-    print('Remaining embeddings')
-    index_embeddings_to_postgres(data)
+    logger.info("All embeddings indexed successfully.")
 
-print("All embeddings indexed successfully.")
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('CTRL-C\n')
+        sys.exit(0)
+    except Exception as exc:
+        # We should already have logged whatever went wrong, but let's make sure
+        print(exc)
+        sys.exit(1)

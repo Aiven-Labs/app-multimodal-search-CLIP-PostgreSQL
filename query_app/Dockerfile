@@ -9,6 +9,7 @@ RUN python3 -m pip install --no-cache-dir .
 COPY ./query_app.py /app
 COPY ./create_table.py /app
 COPY ./process_images.py /app
+COPY ./image_names.txt /app
 
 RUN mkdir -p /app/templates
 COPY ./templates/index.html  /app/templates/index.html
@@ -21,9 +22,8 @@ COPY ./templates/images.html /app/templates/images.html
 # parallel, and the user would get some sort of "still populating
 # the database" response if they tried asking something too early.)
 
-# AT THE MOMENT the table and images are already there...
-#RUN /app/create_table.py
-#RUN /app/process_images.py
+RUN /app/create_table.py
+RUN /app/process_images.py
 
 
 EXPOSE 3000
