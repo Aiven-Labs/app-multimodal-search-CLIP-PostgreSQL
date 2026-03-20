@@ -101,6 +101,8 @@ async def get_image_data(url: str) -> ImageFile:
 
     We assume a "file:" URL for a local file, or an "http:" or "https:" URL
     for remote data.
+
+    May raise HTTPException if an error occurs retrieving the remote data
     """
     if url.startswith('file:'):
         parsed_url = urlparse(url)
@@ -109,11 +111,17 @@ async def get_image_data(url: str) -> ImageFile:
 
     async with httpx.AsyncClient() as client:
         # Retrieve the URL
-        response = await client.get(
-            url,
-            follow_redirects=True,  # For instance, we know that we use GitHub URLs that redirect
-        )
-        response.raise_for_status()
+        try:
+            response = await client.get(
+                url,
+                follow_redirects=True,  # For instance, we know that we use GitHub URLs that redirect
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=f'Error getting image {url}: {e}',
+            )
 
         # Turn the bytes into a "file like" object for PIL
         image_bytes = BytesIO(response.content)
@@ -170,11 +178,32 @@ class EmbeddingResponse(BaseModel):
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 
-# Add a health check endpoint for use by compose
 @app.get("/health")
 async def healthcheck():
+    """Are we running?
+
+    A health check endpoint for use by compose.
+    """
     logger.info('Healthcheck requested')
     return {"status": "ok"}
+
+
+@app.get("/ready")
+async def ready_check():
+    """Are we ready to create embeddings?
+
+    Responds with 200 `{"status": "ok"}` if we're ready, or
+    503 with content like `{"detail": CLIP model openai/clip-vit-base-patch32 not
+    loaded yet - try again soon"}` otherwise.
+    """
+    logger.info('Readiness check requested')
+    if clip_model.model:
+        return {"status": "ok"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=clip_model.error_string,
+        )
 
 
 # Example usage:
@@ -208,22 +237,28 @@ async def process_embedding_request(payload: EmbeddingRequest) -> EmbeddingRespo
         )
 
     embeddings = []
-    if payload.datatype == "text":
-        embedding = get_text_embedding(payload.value)
-    elif payload.datatype == "image":
-        image_data = await get_image_data(payload.value)
-        embedding = get_image_embedding(image_data)
-    else:
-        # This should never occur, but just in case...
+
+    try:
+        if payload.datatype == "text":
+            embedding = get_text_embedding(payload.value)
+        elif payload.datatype == "image":
+            image_data = await get_image_data(payload.value)
+            embedding = get_image_embedding(image_data)
+        else:
+            # This should never occur, but just in case...
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f'"datatype" {payload.datatype} is neither text nor image',
+            )
+    except HTTPException:
+        # If it was already an HTTPException, we can just let it through
+        raise
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'"datatype" {payload.datatype} is neither text nor image',
+            detail=f'Error processing embedding request: {e.__class__.__name__} {e}',
         )
 
-    result = {"embedding": embedding}
-
-    logger.info(f'Rough response size estimate {len(json.dumps(result))}')
-
-    return result
+    return {"embedding": embedding}
 
 
