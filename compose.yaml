@@ -8,7 +8,8 @@ services:
     ports:
       - "8000:8000"
     healthcheck:
-      test: [ "CMD", "python3", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/health').raise_for_status()" ]
+      # Is the CLIP app service ready to serve embeddings?
+      test: [ "CMD", "python3", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/healthy').raise_for_status()" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -22,9 +23,24 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - DATABASE_URL=${DATABASE_URL}
       - CLIP_SERVICE_URL=http://clip_app:8000
-    env_file:
-      - ./.env
+    #env_file:
+    #  - ./.env
     depends_on:
+#     db_healthcheck:
+#       condition: service_healthy
       clip_app:
         condition: service_healthy
+
+# db_healthcheck:
+#   image: postgres:16-alpine
+#   environment:
+#     - DATABASE_URL=${DATABASE_URL}
+#   #env_file:
+#   #  - ./.env
+#   healthcheck:
+#     test: ["CMD-SHELL", "pg_isready -d $DATABASE_URL"]
+#     interval: 5s
+#     timeout: 5s
+#     retries: 5

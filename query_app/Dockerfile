@@ -22,9 +22,8 @@ COPY ./templates/images.html /app/templates/images.html
 # parallel, and the user would get some sort of "still populating
 # the database" response if they tried asking something too early.)
 
-RUN /app/create_table.py
-RUN /app/process_images.py
-
+#RUN /app/create_table.py
+#RUN /app/process_images.py
 
 EXPOSE 3000
 CMD [ "fastapi", "run", "query_app.py", "--port", "3000" ]

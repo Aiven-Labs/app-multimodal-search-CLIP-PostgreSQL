@@ -3,35 +3,44 @@
 """Enable pgvector and create an appropriate table
 """
 
+import logging
 import os
 
 import psycopg
 from dotenv import load_dotenv
 
-SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(name)s %(levelname)s: %(message)s',
+)
+
+logger = logging.getLogger(__name__)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
     # Try the .env file
     load_dotenv()
-    SERVICE_URI = os.getenv("DATABASE_URL")
-if not SERVICE_URI:
+    DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
     import sys
-    sys.exit('No value found for environment variable DATABASE_URL (the PG database)')
+    logger.error('No value found for environment variable DATABASE_URL (the PG database)')
+    sys.exit(1)
 
 # Enable pgvector seperately, in case I DROP the table and want to recreate it
-print('Enabling pgvector')
+logger.info('Enabling pgvector')
 try:
-    with psycopg.connect(SERVICE_URI) as conn:
+    with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute('CREATE EXTENSION vector;')
 except Exception as exc:
-    print(f'{exc.__class__.__name__}: {exc}')
+    logger.error(f'{exc.__class__.__name__}: {exc}')
 
-print('Creating table')
+logger.info('Creating table')
 try:
-    with psycopg.connect(SERVICE_URI) as conn:
+    with psycopg.connect(DATABASE_URL) as conn:
         with conn.cursor() as cur:
             cur.execute('CREATE TABLE pictures (filename text PRIMARY KEY, url text, embedding vector(512));')
 except Exception as exc:
-    print(f'{exc.__class__.__name__}: {exc}')
+    logger.error(f'{exc.__class__.__name__}: {exc}')
 
-print('Done')
+logger.info('Done')
