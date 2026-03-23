@@ -39,6 +39,8 @@ MODEL_NAME = os.environ.get('MODEL_NAME', 'openai/clip-vit-base-patch32')
 # Get the URL for our CLIP embedding service
 CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 
+# Out table name
+TABLE_NAME = 'pictures'
 
 async def get_text_embedding(text) -> List[float]:
     try:
@@ -80,7 +82,7 @@ async def search_for_matches(text):
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT filename, url FROM pictures ORDER BY embedding <-> %s LIMIT 4;",
+                    f"SELECT filename, url FROM {TABLE_NAME} ORDER BY embedding <-> %s LIMIT 4;",
                     (embedding_string,),
                 )
                 return cur.fetchall()

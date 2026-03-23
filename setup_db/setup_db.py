@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-"""Calculate embeddings for our images, and upload them to PostgreSQL
+"""Set up the database for demo use
+
+1. Create the database table
+2. Calculate embeddings for our images, and upload them
 """
 
 import logging
@@ -42,6 +45,8 @@ MODEL_NAME = os.environ.get('MODEL_NAME', 'openai/clip-vit-base-patch32')
 # Get the URL for our CLIP embedding service
 CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 
+# Our table name
+TABLE_NAME = 'pictures'
 
 index_name = "photos"  # Update with your index name
 
@@ -58,6 +63,39 @@ PHOTOS_URL_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-s
 
 # Batch size for processing images and indexing embeddings
 batch_size = 100
+
+
+def create_table():
+    """Enable pgvector and set up our table.
+
+    Assumes that if anything goes wrong, it's something we can ignore
+    """
+    # Enable pgvector seperately, in case I DROP the table and want to recreate it
+    logger.info('Enabling pgvector')
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute('CREATE EXTENSION vector;')
+    except psycopg.errors.DuplicateObject as exc:
+        # pgvector was already enabled - ignore it
+        logger.info(f'{exc.__class__.__name__}: {exc}')
+    except Exception as exc:
+        logger.error(f'Error enabling pgvector; {exc.__class__.__name__}: {exc}')
+        raise
+
+    logger.info('Creating table')
+    try:
+        with psycopg.connect(DATABASE_URL) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f'CREATE TABLE {TABLE_NAME} (filename text PRIMARY KEY, url text, embedding vector(512));',
+                )
+    except psycopg.errors.DuplicateTable as exc:
+        # The table already existed
+        logger.info(f'{exc.__class__.__name__}: {exc}')
+    except Exception as exc:
+        logger.error(f'Error creating table {TABLE_NAME}; {exc.__class__.__name__}: {exc}')
+        raise
 
 
 def compute_clip_features(photo_file_path: str) -> list[float]:
@@ -93,7 +131,7 @@ def index_embeddings_to_postgres(data):
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                with cur.copy('COPY pictures (filename, url, embedding) FROM STDIN') as copy:
+                with cur.copy(f'COPY {TABLE_NAME} (filename, url, embedding) FROM STDIN',) as copy:
                     for row in data:
                         copy.write_row(row)
     except Exception as exc:
@@ -108,7 +146,7 @@ def data_already_exists(file_name: str) -> bool:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT filename FROM pictures WHERE filename = %s;",
+                    f'SELECT filename FROM {TABLE_NAME} WHERE filename = %s;',
                     (file_name,),
                 )
                 results = cur.fetchall()
@@ -126,7 +164,8 @@ def vector_to_string(embedding: list[float]) -> str:
     return vector_str
 
 
-def main():
+def populate_table():
+    logger.info('Adding image embeddings to the database')
     # Iterate over images and process them in batches
 
     # Ideally we'd upload photos via an endpoint on the query app (which would
@@ -171,6 +210,11 @@ def main():
         index_embeddings_to_postgres(data)
 
     logger.info("All embeddings indexed successfully.")
+
+
+def main():
+    create_table()
+    populate_table()
 
 if __name__ == '__main__':
     try:

@@ -15,6 +15,22 @@ services:
       retries: 3
       start_period: 60s
 
+  setup_db:
+    build:
+      context: ./setup_db
+      dockerfile: Dockerfile
+    deploy:
+      restart_policy:
+        condition: none
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - CLIP_SERVICE_URL=http://clip_app:8000
+    depends_on:
+      #     db_healthcheck:
+      #       condition: service_healthy
+      clip_app:
+        condition: service_healthy
+
   query_app:
     build:
       context: ./query_app
@@ -25,11 +41,11 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - CLIP_SERVICE_URL=http://clip_app:8000
-    #env_file:
-    #  - ./.env
     depends_on:
 #     db_healthcheck:
 #       condition: service_healthy
+      setup_db:
+        condition: service_completed_successfully
       clip_app:
         condition: service_healthy
 
@@ -37,8 +53,6 @@ services:
 #   image: postgres:16-alpine
 #   environment:
 #     - DATABASE_URL=${DATABASE_URL}
-#   #env_file:
-#   #  - ./.env
 #   healthcheck:
 #     test: ["CMD-SHELL", "pg_isready -d $DATABASE_URL"]
 #     interval: 5s

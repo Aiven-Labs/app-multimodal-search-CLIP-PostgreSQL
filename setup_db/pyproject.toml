@@ -1,0 +1,16 @@
+[project]
+name = "multimodal-CLIP-demo__setup_db"
+version = "2026.3.13"
+readme = "README.md"
+license = "Apache-2.0"
+
+dependencies = [
+  "typing",
+  "httpx",
+  "psycopg[binary]",
+  "python-dotenv",
+]
+
+[tool.setuptools.packages]
+# We've just got our clip_app.py at the top level, nothing to look for
+find = {namespaces = false}
