@@ -178,19 +178,16 @@ class EmbeddingResponse(BaseModel):
 app = FastAPI(lifespan=lifespan, redirect_slashes=False)
 
 
-@app.get("/health")
-async def healthcheck():
-    """Are we running?
-
-    A health check endpoint for use by compose.
-    """
+@app.get("/started")
+async def started():
+    """Are we running?"""
     logger.info('Healthcheck requested')
     return {"status": "ok"}
 
 
-@app.get("/ready")
-async def ready_check():
-    """Are we ready to create embeddings?
+@app.get("/healthy")
+async def healthy():
+    """Are we a healthy service, which means "ready to create embeddings"?
 
     Responds with 200 `{"status": "ok"}` if we're ready, or
     503 with content like `{"detail": CLIP model openai/clip-vit-base-patch32 not
