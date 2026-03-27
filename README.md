@@ -1,7 +1,7 @@
 # Search for images matching a text, using CLIP, PostgreSQL® and pgvector
 
 
-A Python web wapp that searches for images matching a given text
+A Python web app that searches for images matching a given text
 
 > **Note:** The [slides/](slides/) directory contains slides for a 25
 > minute talk about [version 1](https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/v1.0.0) 
@@ -38,9 +38,10 @@ There are four components in use here:
    database.
 4. As three separate containers, using an external PG database.
 
-The instructions for the first two are on below.
+The instructions for the first two are below.
 
-A summary of how to do the last two is below, but details are in the 
+A summary of how to do the last two
+[is also below](#running-individual-services), but details are in the 
 individual README files in each service subdirectory
 ([`clip_app`](./clip_app/README.md),
 [`setup_db`](./setup_db/README.md),
@@ -128,7 +129,7 @@ docker compose -f compose-implicit-db.yaml up -d
 And when that's all running1G, go to http://0.0.0.0:3000/ to find the prompt.
 
 
-# Individual services
+## Running individual services
 
 The order in which things are done matters, because the different services 
 depend on each other.
@@ -138,13 +139,15 @@ depend on each other.
 2. Start the CLIP application, as described in
    [`the clip_app README`](./clip_app/README.md)
 3. Run the database setup script, as described in 
-   [`the setup_db README`](./setup_db/README.md),
+   [`the setup_db README`](./setup_db/README.md)
 4. Start the query application, as described in
-   [the `query_app README`](./query_app/README.md)).
+   [the `query_app README`](./query_app/README.md)
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
-## The sample photos
+## Other considerations
+
+### The sample photos
 
 The images in the `photos` directory are the same as those used in [Workshop: Searching for images with vector search - OpenSearch and CLIP model](https://github.com/Aiven-Labs/workshop-multimodal-search-CLIP-OpenSearch).
 
@@ -156,9 +159,7 @@ GitHub filesize limits for a repository.
 > production app, as GitHub is not intended to act as an image repository for
 > web apps.
 
-## Interesting things I learnt
-
-### Use the right distribution
+### Use the right Python image
 
 When writing the Dockerfile, the default `FROM python:3.11` downloads much
 of Ubuntu, which we don't need. We can vastly reduce the size of the image
@@ -167,7 +168,7 @@ by using `FROM python:3.11-slim`, at the cost of needing to install `git`
 `git+https://github.com/openai/CLIP.git`) and `curl`. See
 https://hub.docker.com/_/python for more about the Python images available.
 
-### Using `redirect_slashes=FALSE` in FastAPI
+### Use `redirect_slashes=FALSE` in FastAPI
 
 At one point I was running the Dockerised application in an HTTPS context.
 In order to make the redirect to `/search_form` also use HTTPS, I

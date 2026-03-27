@@ -2,8 +2,9 @@
 
 This script
 
-1. Creates the database table we're using, if it doesn't already exist
-2. Calculate embeddings for our sample image files and enters them into
+1. Enables `pgvector`
+2. Creates the database table we're using, if it doesn't already exist
+3. Calculate embeddings for our sample image files and enters them into
    the database table, if they're not already there.
 
 ## Prerequisites
@@ -13,7 +14,9 @@ This script
 You need an existing PostgreSQL® database, which this script will
 populate with image names/URLs and their corresponding embeddings.
 
-> **Note** an Aiven for PostgreSQL database will work just fine.
+An Aiven for PostgreSQL service will do very well - see the
+[Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
+section in the [Aiven documentation](https://aiven.io/docs).
 
 ### The clip app
 

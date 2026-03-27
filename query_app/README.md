@@ -14,7 +14,9 @@ This application:
 You need an existing PostgreSQL® database, and you need to populate it with 
 image names/URLs and their corresponding embeddings.
 
-> **Note** an Aiven for PostgreSQL database will work just fine.
+An Aiven for PostgreSQL service will do very well - see the
+[Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
+section in the [Aiven documentation](https://aiven.io/docs).
 
 ### Sample data in the database
 

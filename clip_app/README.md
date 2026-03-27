@@ -75,9 +75,9 @@ It takes a JSON request looking like:
 
 It returns a response of the form
 ```json
-{"embedding":[0.014406335540115833,...,0.007464071735739708]}
+{"embedding":[0.014406335540115833,..,0.007464071735739708]}
 ```
-where the `...` is the appropriate number of floating point values.
+where the `..` is the appropriate number of floating point values.
 
 ### GET '/started'
 
