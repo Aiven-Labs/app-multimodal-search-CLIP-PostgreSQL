@@ -6,7 +6,10 @@ on [Sunday, September 21st
 2025](https://pretalx.com/pyconuk-2025/talk/VTHPZK/)
 by [Tibs](https://aiven.io/Tibs).
 
-This is a talk about the application that lives in this repository.
+This is a talk about
+[version 1](https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/v1.0.0)
+of the application that lives in this repository.
+That version of the code was organised around a single app and its container file.
 
 See the [video recording on youtube](https://www.youtube.com/watch?v=p3JThptSYos).
 
