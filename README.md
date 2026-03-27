@@ -8,6 +8,24 @@ A Python web wapp that searches for images matching a given text
 > of this code, as given at PyCon UK 2025. That version was organised around 
 > a single app and its container file.
 
+## Architecture
+
+There are four components in use here:
+
+* A PostgreSQL® database, with the `pgvector` extension installed. This 
+  is used to store image and text embeddings
+* A FastAPI application that can take a text, or the URL for am image file, 
+  and use the CLIP model to calculate the vector embedding for that text or 
+  image.
+* A script that sets the database up. It makes sure that `pgvector` is set 
+  up, and then uses the CLIP app to calculate the embedding for each image 
+  in the `photos` directory. It adds an entry in the database for each image 
+  name/URL and its embedding.
+* A FastAPI application that allows the user to enter a text string. It uses 
+  the CLIP app to calculate the embedding for the text string, and then 
+  looks in the database for images with a similar embedding, so that it can 
+  present the four closest images to the user.
+
 ## Four ways to run this code
 
 1. As a single self-contained service, complete with its own PostgreSQL 
@@ -18,13 +36,89 @@ A Python web wapp that searches for images matching a given text
    database.
 4. As three separate containers, using an external PG database.
 
-The instructions for the first two are on here.
+The instructions for the first two are on below.
 
-A summary of how to do the last two is here, but details are in the 
+A summary of how to do the last two is below, but details are in the 
 individual README files in each service subdirectory
 ([`clip_app`](./clip_app/README.md),
 [`setup_db`](./setup_db/README.md),
 [`query_app`](./query_app/README.md)).
+
+## One service using compose
+
+For the bash or other traditional shells:
+```shell
+export POSTGRES_USER=embeddings_user
+export POSTGRES_PASSWORD=please-do-not-use-this-password
+export POSTGRES_DB=embeddings
+```
+
+For the fish shell:
+```shell
+set -x POSTGRES_USER embeddings_user
+set -x POSTGRES_PASSWORD please-do-not-use-this-password
+set -x POSTGRES_DB embeddings
+```
+
+**or** set the same values in a `.env` file (`docker compose`) will look 
+there as well).
+
+And as it says, please use a proper password 🙂.
+
+
+```shell
+docker compose up -d
+```
+
+And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+
+
+## One service and an external database, using compose
+
+
+Create your external PostgreSQL® database. An Aiven for PostgreSQL service 
+will do very well - see the [Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
+section in the [Aiven documentation](https://aiven.io/docs).
+
+Either:
+
+* Set the `DATABASE_URL` environment variable to the PostgreSQL Service URI.
+
+* Copy the template environment file
+  ```shell
+  cp .env_example .env
+  ```
+  Then edit the `.env` file to insert the credentials needed to connect to the database.
+
+> **Note** If you're using an Aiven for PostgreSQL service, then you want the
+**Service URI** value from the service **Overview** in the Aiven console.
+> The result should look something like:
+>
+>     DATABASE_URL=postgres://<user>:<password>@<host>:<port>/dbname?sslmode=require
+
+
+```shell
+docker compose -f compose-implicit-db.yaml up -d
+```
+
+And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+
+
+# Individual services
+
+The order in which things are done matters, because the different services 
+depend on each other.
+
+1. Create an external database, as described in [One service and an external 
+   database, using compose](#one-service-and-an-external-database-using-compose)
+2. Start the CLIP application, as described in
+   [`the clip_app README`](./clip_app/README.md)
+3. Run the database setup script, as described in 
+   [`the setup_db README`](./setup_db/README.md),
+4. Start the query application, as described in
+   [the `query_app README`](./query_app/README.md)).
+
+And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 ----
 
