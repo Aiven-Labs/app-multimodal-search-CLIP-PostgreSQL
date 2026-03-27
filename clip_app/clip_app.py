@@ -5,7 +5,6 @@
 
 import asyncio
 import logging
-import json
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -34,6 +33,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# httpx will log all GET and POST requests at level INFO, which is a bit much,
+# so let's disable that
+logging.getLogger("httpx").setLevel(logging.ERROR)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -255,6 +258,8 @@ async def process_embedding_request(payload: EmbeddingRequest) -> EmbeddingRespo
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'Error processing embedding request: {e.__class__.__name__} {e}',
         )
+
+    logger.info('Returning emedding')
 
     return {"embedding": embedding}
 

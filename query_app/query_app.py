@@ -26,6 +26,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# httpx will log all GET and POST requests at level INFO, which is a bit much,
+# so let's disable that
+logging.getLogger("httpx").setLevel(logging.ERROR)
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     # Try the .env file
@@ -43,6 +47,7 @@ CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 TABLE_NAME = 'pictures'
 
 async def get_text_embedding(text) -> List[float]:
+    logger.info(f'Requesting embeddings for {text}')
     try:
         response = httpx.post(
             f'{CLIP_SERVICE_URL}/embed',

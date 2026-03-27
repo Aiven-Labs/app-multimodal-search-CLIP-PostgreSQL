@@ -99,6 +99,7 @@ def create_table():
 
 
 def compute_clip_features(photo_file_path: str) -> list[float]:
+    logger.info(f'Requesting embeddings for {photo_file_path}')
     try:
         response = httpx.post(
             f'{CLIP_SERVICE_URL}/embed',
@@ -107,8 +108,11 @@ def compute_clip_features(photo_file_path: str) -> list[float]:
                 "datatype": "image",
                 "value": photo_file_path,
             },
+            timeout=None,    # the default is documented as 5 seconds
         )
         response.raise_for_status()
+
+        logger.info(f'Received embeddings for {photo_file_path}')
 
         data = response.json()
         return data["embedding"]
@@ -128,6 +132,7 @@ def index_embeddings_to_postgres(data):
     See https://www.psycopg.org/psycopg3/docs/basic/copy.html for more on
     the use of COPY.
     """
+    logger.info(f'Writing {len(data)} rows to PostgreSQL')
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
