@@ -1,4 +1,4 @@
-# An app for searching for images matching a text, using CLIP, PostgreSQL® and pgvector
+# Search for images matching a text, using CLIP, PostgreSQL® and pgvector
 
 
 A Python web wapp that searches for images matching a given text
@@ -125,7 +125,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 docker compose -f compose-implicit-db.yaml up -d
 ```
 
-And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+And when that's all running1G, go to http://0.0.0.0:3000/ to find the prompt.
 
 
 # Individual services
