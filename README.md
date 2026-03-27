@@ -48,25 +48,34 @@ individual README files in each service subdirectory
 
 ## One service using compose
 
-For the bash or other traditional shells:
-```shell
-export POSTGRES_USER=embeddings_user
-export POSTGRES_PASSWORD=please-do-not-use-this-password
-export POSTGRES_DB=embeddings
-```
+### Set environment variables to describe your database
 
-For the fish shell:
-```shell
-set -x POSTGRES_USER embeddings_user
-set -x POSTGRES_PASSWORD please-do-not-use-this-password
-set -x POSTGRES_DB embeddings
-```
+These will be used when creating the database service.
 
-**or** set the same values in a `.env` file (`docker compose`) will look 
-there as well).
+* For bash or other traditional shells:
+  ```shell
+  export POSTGRES_USER=embeddings_user
+  export POSTGRES_PASSWORD=please-do-not-use-this-password
+  export POSTGRES_DB=embeddings
+  ```
 
-And as it says, please use a proper password 🙂.
+* For the fish shell:
+  ```shell
+  set -x POSTGRES_USER embeddings_user
+  set -x POSTGRES_PASSWORD please-do-not-use-this-password
+  set -x POSTGRES_DB embeddings
+  ```
 
+* **Or** set the same values in a `.env` file
+  ```shell
+  POSTGRES_USER=embeddings_user
+  POSTGRES_PASSWORD=please-do-not-use-this-password
+  POSTGRES_DB=embeddings
+  ```
+  
+> And as it says, please use a proper password 🙂.
+
+### Create the images and start the services:
 
 ```shell
 docker compose up -d
@@ -77,27 +86,40 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 ## One service and an external database, using compose
 
+### Create your external PostgreSQL® database
 
-Create your external PostgreSQL® database. An Aiven for PostgreSQL service 
-will do very well - see the [Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
+An Aiven for PostgreSQL service will do very well - see the
+[Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
 section in the [Aiven documentation](https://aiven.io/docs).
 
-Either:
+### Set the environment variable to access your database
 
-* Set the `DATABASE_URL` environment variable to the PostgreSQL Service URI.
+Since the database already exists, you need to let the other services know 
+how to connect to it. The URL you need should look something like
+> `postgres://<user>:<password>@<host>:<port>/dbname?sslmode=require`
 
-* Copy the template environment file
+We'll refer to that URL as `<service URI>` in the following notes.
+
+> **Note** If you're using an Aiven for PostgreSQL service, then you can
+> find this as the **Service URI** value from the service **Overview** in the
+> Aiven console.
+
+* For bash or other traditional shells:
   ```shell
-  cp .env_example .env
+  export DATABASE_URL=<service URI>
   ```
-  Then edit the `.env` file to insert the credentials needed to connect to the database.
 
-> **Note** If you're using an Aiven for PostgreSQL service, then you want the
-**Service URI** value from the service **Overview** in the Aiven console.
-> The result should look something like:
->
->     DATABASE_URL=postgres://<user>:<password>@<host>:<port>/dbname?sslmode=require
+* For the fish shell:
+  ```shell
+  set -x DATABASE_URL=<service URI>
+  ```
 
+* **Or** set the same values in a `.env` file
+  ```shell
+  DATABASE_URL=<service URI>
+  ```
+
+### Create the images and start the services
 
 ```shell
 docker compose -f compose-implicit-db.yaml up -d
