@@ -1,11 +1,11 @@
 # A FastAPI app to query a (local) CLIP model
 
-This app
+This application
 
 1. Gets the CLIP model
 2. Answers requests for embeddings produced using that model
 
-## Running the app locally
+## Running the app in the shell
 
 First, if you didn't already do so, create a virtual environment to keep
 package installation local to this directory
@@ -33,7 +33,7 @@ cached version (for instance, in `~/.cache/huggingface`) and if there isn't
 one, will download the model itself, which will cause a delay before the app
 can find images.
 
-Run the webapp locally using fastapi
+Run the app using fastapi
 ```shell
 fastapi dev clip_app.py --port 8000
 ```
@@ -45,9 +45,9 @@ Build the image.
 docker build -t clip_app_image .
 ```
 
-Run the container. Pass the PostgreSQL service URI as an environment variable.
+Run the container.
 ```
-docker run -d --name clip_ap_container -p 8000:8000 clip_app_image
+docker run -d --name clip_app_container -p 8000:8000 clip_app_image
 ```
 
 ## Endpoints

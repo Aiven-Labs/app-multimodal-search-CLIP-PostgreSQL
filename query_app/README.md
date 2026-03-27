@@ -7,14 +7,18 @@ This application:
 3. Queries the database for matches
 4. Shows the first/best four matching pictures to the user
 
-## Setting up the database
+## Prerequisites
+
+### A PostgreSQL® database
 
 You need an existing PostgreSQL® database, and you need to populate it with 
 image names/URLs and their corresponding embeddings.
 
 > **Note** an Aiven for PostgreSQL database will work just fine.
 
-To populate the database, you need
+### Sample data in the database
+
+To populate the database with sample data, you need
 1. To get the clip app running (you'll also need this to make queries). See 
    the [`clip_app` README](../clip_app/README.md)
 2. To run the database setup script. This also depends on the clip app.
@@ -79,7 +83,10 @@ docker build -t query_app_image .
 
 Run the container. Pass the PostgreSQL service URI as an environment variable.
 ```
-docker run -d --name query_app_container -p 3000:3000 query_app_image
+docker run -d --name query_app_container \
+    -p 3000:3000 \
+    -e DATABASE_URL=$DATABASE_URL \
+    query_app_image
 ```
 
 ## Make a query
@@ -92,3 +99,13 @@ Possible ideas include:
 * outer space
 
 You should get four images back.
+
+## The `find_images` script
+
+You can run `find_images.py` to check that everything is working without
+starting up the web app. It looks for images matching the text `man jumping` and
+reports their filenames. It needs the same environment variables setting as the
+main `clip_app`.
+```shell
+./find_images.py
+```
