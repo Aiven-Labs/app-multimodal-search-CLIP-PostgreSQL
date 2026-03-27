@@ -26,6 +26,8 @@ There are four components in use here:
   looks in the database for images with a similar embedding, so that it can 
   present the four closest images to the user.
 
+![Showing the first match for "man jumping" in the query app](slides/images/app-man-jumping.png)
+
 ## Four ways to run this code
 
 1. As a single self-contained service, complete with its own PostgreSQL 
