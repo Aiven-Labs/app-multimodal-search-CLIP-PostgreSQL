@@ -1,12 +1,36 @@
 # An app for searching for images matching a text, using CLIP, PostgreSQL® and pgvector
 
-> **NOTE:** This README still describes the `main` branch, and not this
-> branch, where we're splitting the app up and using a compose file.
 
-A Python web web app that searches for images matching a given text
+A Python web wapp that searches for images matching a given text
 
 > **Note:** The [slides/](slides/) directory contains slides for a 25
-> minute talk about this workshop, as given at PyCon UK 2025.
+> minute talk about [version 1](https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/v1.0.0) 
+> of this code, as given at PyCon UK 2025. That version was organised around 
+> a single app and its container file.
+
+## Four ways to run this code
+
+1. As a single self-contained service, complete with its own PostgreSQL 
+   database, using the `compose.yaml` file.
+2. As a single self-contained service with an external PostgreSQL database, 
+   using the `compose-implicit-db.yaml`
+3. As three separate services at the command line, using an external PG
+   database.
+4. As three separate containers, using an external PG database.
+
+The instructions for the first two are on here.
+
+A summary of how to do the last two is here, but details are in the 
+individual README files in each service subdirectory
+([`clip_app`](./clip_app/README.md),
+[`setup_db`](./setup_db/README.md),
+[`query_app`](./query_app/README.md)).
+
+----
+
+> **OLD TEXT BELOW HERE**
+
+----
 
 ## Prepare the database
 
