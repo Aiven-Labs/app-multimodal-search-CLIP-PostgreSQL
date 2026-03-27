@@ -23,11 +23,11 @@ services:
       restart_policy:
         condition: none
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - CLIP_SERVICE_URL=http://clip_app:8000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://clip_app:8000
     depends_on:
-#     db_healthcheck:
-#       condition: service_healthy
+      postgres_db:
+        condition: service_healthy
       clip_app:
         condition: service_healthy
 
@@ -39,22 +39,24 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - CLIP_SERVICE_URL=http://clip_app:8000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://clip_app:8000
     depends_on:
-#     db_healthcheck:
-#       condition: service_healthy
+      postgres_db:
+       condition: service_healthy
       setup_db:
         condition: service_completed_successfully
       clip_app:
         condition: service_healthy
 
-# db_healthcheck:
-#   image: postgres:17-alpine
-#   environment:
-#     - DATABASE_URL=${DATABASE_URL}
-#   healthcheck:
-#     test: ["CMD-SHELL", "pg_isready -d $${DATABASE_URL}"]
-#     interval: 5s
-#     timeout: 5s
-#     retries: 5
+  postgres_db:
+   image: pgvector/pgvector:pg17
+   environment:
+     POSTGRES_DB: ${POSTGRES_DB}
+     POSTGRES_USER: ${POSTGRES_USER}
+     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+   healthcheck:
+     test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+     interval: 5s
+     timeout: 5s
+     retries: 5
