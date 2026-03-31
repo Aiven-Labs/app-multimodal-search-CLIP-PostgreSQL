@@ -1,0 +1,63 @@
+services:
+
+  mm_search_clip_app:
+    build:
+      context: ./clip_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    healthcheck:
+      # Is the CLIP app service ready to serve embeddings?
+      test: [ "CMD", "python3", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/healthy').raise_for_status()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  mm_search_setup_db:
+    build:
+      context: ./setup_db
+      dockerfile: Dockerfile
+    deploy:
+      restart_policy:
+        condition: none
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm_search_postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://mm_search_clip_app:8000
+    depends_on:
+      mm_search_postgres_db:
+        condition: service_healthy
+      mm_search_clip_app:
+        condition: service_healthy
+
+  mm_search_query_app:
+    build:
+      context: ./query_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm_search_postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://mm_search_clip_app:8000
+    depends_on:
+      mm_search_postgres_db:
+       condition: service_healthy
+      mm_search_setup_db:
+        condition: service_completed_successfully
+      mm_search_clip_app:
+        condition: service_healthy
+
+  # This PG will not have pgvector built in
+  mm_search_postgres_db:
+     image: postgres:17-alpine
+     environment:
+       POSTGRES_DB: ${POSTGRES_DB}
+       POSTGRES_USER: ${POSTGRES_USER}
+       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+     healthcheck:
+       test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+       interval: 5s
+       timeout: 5s
+       retries: 5
