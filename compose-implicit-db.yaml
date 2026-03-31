@@ -7,7 +7,7 @@
 
 services:
 
-  clip_app:
+  mm_search_clip_app:
     build:
       context: ./clip_app
       dockerfile: Dockerfile
@@ -22,7 +22,7 @@ services:
       retries: 3
       start_period: 60s
 
-  setup_db:
+  mm_search_setup_db:
     build:
       context: ./setup_db
       dockerfile: Dockerfile
@@ -31,12 +31,12 @@ services:
         condition: none
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - CLIP_SERVICE_URL=http://clip_app:8000
+      - CLIP_SERVICE_URL=http://mm_search_clip_app:8000
     depends_on:
-      clip_app:
+      mm_search_clip_app:
         condition: service_healthy
 
-  query_app:
+  mm_search_query_app:
     build:
       context: ./query_app
       dockerfile: Dockerfile
@@ -45,9 +45,9 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - CLIP_SERVICE_URL=http://clip_app:8000
+      - CLIP_SERVICE_URL=http://mm_search_clip_app:8000
     depends_on:
-      setup_db:
+      mm_search_setup_db:
         condition: service_completed_successfully
-      clip_app:
+      mm_search_clip_app:
         condition: service_healthy

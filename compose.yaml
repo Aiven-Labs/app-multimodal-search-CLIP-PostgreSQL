@@ -1,6 +1,6 @@
 services:
 
-  clip_app:
+  mm_search_clip_app:
     build:
       context: ./clip_app
       dockerfile: Dockerfile
@@ -15,7 +15,7 @@ services:
       retries: 3
       start_period: 60s
 
-  setup_db:
+  mm_search_setup_db:
     build:
       context: ./setup_db
       dockerfile: Dockerfile
@@ -23,15 +23,15 @@ services:
       restart_policy:
         condition: none
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
-      CLIP_SERVICE_URL: http://clip_app:8000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm_search_postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://mm_search_clip_app:8000
     depends_on:
-      postgres_db:
+      mm_search_postgres_db:
         condition: service_healthy
-      clip_app:
+      mm_search_clip_app:
         condition: service_healthy
 
-  query_app:
+  mm_search_query_app:
     build:
       context: ./query_app
       dockerfile: Dockerfile
@@ -39,17 +39,17 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
-      CLIP_SERVICE_URL: http://clip_app:8000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm_search_postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://mm_search_clip_app:8000
     depends_on:
-      postgres_db:
+      mm_search_postgres_db:
        condition: service_healthy
-      setup_db:
+      mm_search_setup_db:
         condition: service_completed_successfully
-      clip_app:
+      mm_search_clip_app:
         condition: service_healthy
 
-  postgres_db:
+  mm_search_postgres_db:
    image: pgvector/pgvector:pg17
    environment:
      POSTGRES_DB: ${POSTGRES_DB}
