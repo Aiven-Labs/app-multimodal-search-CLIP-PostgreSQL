@@ -1,16 +1,13 @@
 [project]
-name = "multimodal-CLIP-demo"
-version = "2026.2.8"
+name = "multimodal-CLIP-demo__CLIP-app"
+version = "2026.3.13"
 readme = "README.md"
 license = "Apache-2.0"
 
 dependencies = [
   "typing",
   "fastapi[standard]",
-  "jinja2",
-  "pillow",
-  "psycopg[binary]",
-  "python-dotenv",
+  "pillow",  # we'll need this when we support reading images from a URL or file path
   "torch",
   "huggingface_hub",
   #"transformers",
@@ -22,5 +19,5 @@ dependencies = [
 ]
 
 [tool.setuptools.packages]
-# We've just got our app.py at the top level, nothing to look for
+# We've just got our clip_app.py at the top level, nothing to look for
 find = {namespaces = false}

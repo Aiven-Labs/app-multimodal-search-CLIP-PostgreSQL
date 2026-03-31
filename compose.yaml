@@ -1,0 +1,62 @@
+services:
+
+  clip_app:
+    build:
+      context: ./clip_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    healthcheck:
+      # Is the CLIP app service ready to serve embeddings?
+      test: [ "CMD", "python3", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/healthy').raise_for_status()" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  setup_db:
+    build:
+      context: ./setup_db
+      dockerfile: Dockerfile
+    deploy:
+      restart_policy:
+        condition: none
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://clip_app:8000
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      clip_app:
+        condition: service_healthy
+
+  query_app:
+    build:
+      context: ./query_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://clip_app:8000
+    depends_on:
+      postgres_db:
+       condition: service_healthy
+      setup_db:
+        condition: service_completed_successfully
+      clip_app:
+        condition: service_healthy
+
+  postgres_db:
+   image: pgvector/pgvector:pg17
+   environment:
+     POSTGRES_DB: ${POSTGRES_DB}
+     POSTGRES_USER: ${POSTGRES_USER}
+     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+   healthcheck:
+     test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+     interval: 5s
+     timeout: 5s
+     retries: 5
