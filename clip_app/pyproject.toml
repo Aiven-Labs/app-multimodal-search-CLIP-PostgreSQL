@@ -14,7 +14,7 @@ dependencies = [
   # Version 5 of the HuggingFace transformers package introduced a
   # breaking change to the output of get_image_features. For now
   # stick with an older version.
-  "transformers==4.57.3",  # try an old version of transformers
+  "transformers==5.0.0rc3",  # try an old version of transformers
 
 ]
 
