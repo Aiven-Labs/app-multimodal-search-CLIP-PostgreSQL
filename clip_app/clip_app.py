@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from transformers import CLIPProcessor, CLIPModel
 
 # Get our model name and directories
+from download_mode import download_model
 from model_info import *
 
 logging.basicConfig(
@@ -59,22 +60,19 @@ clip_model = Model(None, None, f"CLIP model {MODEL_NAME} not loaded yet - try ag
 def load_clip_model():
     """Load the open CLIP model"""
 
-    logger.info(f'Using device {DEVICE} for model calculations')
+    # If the MODEL_DIR doesn't exist, then assume we need to download the model.
+    # We *could* just allow the call of `CLIPModel.from_pretrained` to do the
+    # download for us, but our `download_model` function actually downloads
+    # less data / fewer files, so should be a bit quicker and use less space.
+    if not MODEL_DIR.exists():
+        download_model()
 
     try:
-        # Load the open CLIP model
-        # If we're being run from our Dockerfile, then the model should already
-        # have been downloaded to MODEL_DIR, so let's check for that first.
-        # If that directory doesn't exist, fall back to the normal "download and
-        # cache" approach, when the model will be cached in ~/.cache/clip.
-        if MODEL_DIR.exists():
-            logger.info(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
-            clip_model.model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
-            clip_model.processor = CLIPProcessor.from_pretrained(MODEL_DIR)
-        else:
-            logger.info(f'Importing CLIP model {MODEL_NAME} from HuggingFace')
-            clip_model.model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
-            clip_model.processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+        # Load the open CLIP model that we just downloaded
+        logger.info(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
+        logger.info(f'Using device {DEVICE} for model calculations')
+        clip_model.model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
+        clip_model.processor = CLIPProcessor.from_pretrained(MODEL_DIR)
     except Exception as exc:
         clip_model.error_string = f'Unable to load CLIP model {MODEL_NAME}: Please restart the application'
         logger.exception(clip_model.error_string)
