@@ -1,0 +1,42 @@
+services:
+
+  mm_search_clip_app:
+    build:
+      context: ./clip_app
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+
+  mm_search_setup_db:
+    build:
+      context: ./setup_db
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm_search_postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://mm_search_clip_app:8000
+    depends_on:
+      - mm_search_postgres_db
+      - mm_search_clip_app
+
+  mm_search_query_app:
+    build:
+      context: ./query_app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm_search_postgres_db:5432/${POSTGRES_DB}
+      CLIP_SERVICE_URL: http://mm_search_clip_app:8000
+    depends_on:
+      - mm_search_postgres_db
+      - mm_search_setup_db
+      - mm_search_clip_app
+
+  # We expect this PG service to be replaced by an Aiven for PostgreSQL service,
+  # which we know will have pgvector built in
+  mm_search_postgres_db:
+     image: postgres:17-alpine
+     environment:
+       POSTGRES_DB: ${POSTGRES_DB}
+       POSTGRES_USER: ${POSTGRES_USER}
+       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
