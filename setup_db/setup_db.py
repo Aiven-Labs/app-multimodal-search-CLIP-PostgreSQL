@@ -103,10 +103,7 @@ def create_table():
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                cur.execute('CREATE EXTENSION vector;')
-    except psycopg.errors.DuplicateObject as exc:
-        # pgvector was already enabled - ignore it
-        logger.info(f'{exc.__class__.__name__}: {exc}')
+                cur.execute('CREATE EXTENSION IF NOT EXISTS vector;')
     except Exception as exc:
         logger.error(f'Error enabling pgvector; {exc.__class__.__name__}: {exc}')
         raise
