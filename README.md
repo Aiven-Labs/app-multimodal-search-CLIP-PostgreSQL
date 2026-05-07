@@ -36,7 +36,7 @@ There are three components in use here:
 1. As a single self-contained service, complete with its own PostgreSQL 
    database, using the `compose.yaml` file.
 2. As a single self-contained service with an external PostgreSQL database, 
-   using the `compose-implicit-db.yaml`
+   using the `compose,existing-db.yaml`
 3. As two separate services at the command line, using an external PG
    database.
 4. As two separate containers, using an external PG database.
@@ -50,7 +50,7 @@ individual README files in each service subdirectory
 [`setup_db`](./setup_db/README.md),
 [`query_app`](./query_app/README.md)).
 
-## One service using compose
+## Using compose to create all the services, including PostgreSQL
 
 ### Set environment variables to describe your database
 
@@ -88,9 +88,12 @@ docker compose up -d
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 
-## One service and an external database, using compose
+## Using compose with an external PostgreSQL database
 
 ### Create your external PostgreSQL® database
+
+Remember that the PostgreSQL database needs to have the pgvector extension
+installed.
 
 An Aiven for PostgreSQL service will do very well - see the
 [Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
@@ -126,7 +129,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 ### Create the images and start the services
 
 ```shell
-docker compose -f compose-implicit-db.yaml up -d
+docker compose -f compose.existing-db.yaml up -d
 ```
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
@@ -137,8 +140,8 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 The order in which things are done matters, because the different services 
 depend on each other.
 
-1. Create an external database, as described in [One service and an external 
-   database, using compose](#one-service-and-an-external-database-using-compose)
+1. Create an external database, as described in [Using compose with an 
+   external PostgreSQL database](#using-compose-with-an-external-postgresql-database)
 2. Start the CLIP application, as described in
    [`the clip_app README`](./clip_app/README.md)
 3. Start the query application, as described in
