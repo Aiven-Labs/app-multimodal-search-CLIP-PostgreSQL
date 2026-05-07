@@ -247,9 +247,9 @@ def populate_table():
         if len(data) >= batch_size:
             logger.info(f'Adding batch {batch_count} of image embeddings')
             index_embeddings_to_postgres(data)
-            data = []
             batch_count += 1
             total += len(data)
+            data = []
             app_status.message = f'Adding examples to PostgreSQL database ({total}/{len(image_file_names)})'
 
     # Index any remaining data
