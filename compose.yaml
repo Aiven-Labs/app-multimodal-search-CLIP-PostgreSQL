@@ -1,3 +1,6 @@
+# This compose file creates the multimodal search services, including
+# a PostgreSQL database with the pgvector plugin built in.
+
 services:
 
   mm_search_clip_app:
