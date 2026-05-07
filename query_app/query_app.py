@@ -97,7 +97,11 @@ def wait_for_clip_service() -> None:
 
         except Exception as exc:
             logger.error(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
-            raise Exception(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+            # For instance
+            #   Error getting CLIP service readiness from http://mm-search-clip-app:8000: ConnectError: [Errno -2] Name or service not known
+            # This happens when the CLIP service has not come up yet. If we keep trying, will it eventually "get better"?
+            continue
+            #raise Exception(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
 
 
 def create_table():
