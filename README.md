@@ -10,21 +10,24 @@ A Python web app that searches for images matching a given text
 
 ## Architecture
 
-There are four components in use here:
+There are three components in use here:
 
 * A PostgreSQL® database, with the `pgvector` extension installed. This 
   is used to store image and text embeddings
 * A FastAPI application that can take a text, or the URL for am image file, 
   and use the CLIP model to calculate the vector embedding for that text or 
   image.
-* A script that sets the database up. It makes sure that `pgvector` is set 
-  up, and then uses the CLIP app to calculate the embedding for each image 
-  in the `photos` directory. It adds an entry in the database for each image 
-  name/URL and its embedding.
-* A FastAPI application that allows the user to enter a text string. It uses 
-  the CLIP app to calculate the embedding for the text string, and then 
-  looks in the database for images with a similar embedding, so that it can 
-  present the four closest images to the user.
+* A FastAPI application that:
+
+  1. Waits for the CLIP app to be ready.
+  2. Sets the database up. It makes sure that `pgvector` is enabled, and then
+     uses the CLIP app to calculate the embedding for each image in the
+     `photos` directory. It adds an entry in the database for each image
+     name/URL and its embedding.
+  3. Allows the user to enter a text string. It uses the CLIP app to calculate
+     the embedding for the text string, and then looks in the database for
+     images with a similar embedding, so that it can present the four closest
+     images to the user.
 
 ![Showing the first match for "man jumping" in the query app](slides/images/app-man-jumping.png)
 
@@ -34,9 +37,9 @@ There are four components in use here:
    database, using the `compose.yaml` file.
 2. As a single self-contained service with an external PostgreSQL database, 
    using the `compose-implicit-db.yaml`
-3. As three separate services at the command line, using an external PG
+3. As two separate services at the command line, using an external PG
    database.
-4. As three separate containers, using an external PG database.
+4. As two separate containers, using an external PG database.
 
 The instructions for the first two are below.
 
@@ -126,7 +129,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 docker compose -f compose-implicit-db.yaml up -d
 ```
 
-And when that's all running1G, go to http://0.0.0.0:3000/ to find the prompt.
+And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 
 ## Running individual services
@@ -138,9 +141,7 @@ depend on each other.
    database, using compose](#one-service-and-an-external-database-using-compose)
 2. Start the CLIP application, as described in
    [`the clip_app README`](./clip_app/README.md)
-3. Run the database setup script, as described in 
-   [`the setup_db README`](./setup_db/README.md)
-4. Start the query application, as described in
+3. Start the query application, as described in
    [the `query_app README`](./query_app/README.md)
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
