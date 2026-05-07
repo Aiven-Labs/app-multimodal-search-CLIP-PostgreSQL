@@ -204,8 +204,13 @@ def populate_table():
     # The image_names.txt file is in the same directory as this file...
     running_dir = Path(__file__).parent.resolve()
     image_names_file = running_dir / 'image_names.txt'
-    with open(image_names_file) as fd:
-        image_file_names = fd.read().splitlines()
+    try:
+        with open(image_names_file) as fd:
+            image_file_names = fd.read().splitlines()
+    except FileNotFoundError:
+        logger.error(f'Cannot open {image_names_file}')
+        # Best we can do is give up loading things and hope there's something in the database
+        return
 
     # If the data is already in the database, then we don't want to run again
     # So let's look for the _last_ filename

@@ -6,6 +6,7 @@ COPY ./pyproject.toml /app
 
 RUN python3 -m pip install --no-cache-dir .
 
+COPY ./image_names.txt /app
 COPY ./query_app.py /app
 
 RUN mkdir -p /app/templates
