@@ -235,6 +235,7 @@ def populate_table():
         if entry_already_exists(filename):
             if not logged_skipping:
                 logger.info(f'Skipping entries that already exist')
+                app_status.message = 'Checking examples in PostgreSQL database'
                 logged_skipping = True
             total += 1
             continue
