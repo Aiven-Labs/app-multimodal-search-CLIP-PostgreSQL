@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from transformers import CLIPProcessor, CLIPModel
 
 # Get our model name and directories
-from download_mode import download_model
+from download_model import download_model
 from model_info import *
 
 logging.basicConfig(
