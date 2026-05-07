@@ -135,12 +135,15 @@ to use different models.
 
 ## Only download the model files we need
 
-In the Docker context, we deliberately download the model first,
-so that the app starts in a more deterministic state (there isn't a
-possibly long wait while the Python script loads the model from the
-internet).
+We deliberately download the model in a background thread once the app has
+started.
+This means the app starts in a more deterministic state - you can query the app
+before the model has finished downloading.
 
-However, we don't need *all* of the files within a HuggingFace model,
+We don't need *all* of the files within a HuggingFace model,
 and ignoring some of them can save a useful amount of space (and time).
 
-See `model_info.py` and `download_model.py` for more information.
+See `model_info.py` for more information.
+
+If you wish, you can run `download_model.py` before running the app, which will
+download the model separately. The app then won't need to do so.
