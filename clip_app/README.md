@@ -79,7 +79,7 @@ It returns a response of the form
 ```
 where the `..` is the appropriate number of floating point values.
 
-### GET '/started'
+### GET `/started`
 
 This always responds 200 `{"status": "ok"}`, indicating that the app has 
 started.

@@ -1,30 +1,43 @@
 # A FastAPI app to retrieve some pictures that match a text prompt
 
-This application:
+This application has two parts:
+
+When it starts up, it creates a background thread to
+
+1. Wait for the CLIP app to be ready
+2. Set up the database (enabling pgvector and creating the database table)
+3. Calculate the embedding for each of the sample images (named in the
+   `image_name.txt` file) and add a record for that image and its embedding
+   into the database table. If this process has already been done for the
+   database, it won't repeat it.
+
+Meanwhile it also starts up the actual query frontend, which
 
 1. Gets the text prompt from the user
 2. Asks the CLIP app for the embedding for that text prompt
 3. Queries the database for matches
 4. Shows the first/best four matching pictures to the user
 
+That will only work if the backgroud thread has completed. If not, you'll get
+an informative message explaining how far it has got, and a request to try
+again later.
+
 ## Prerequisites
 
 ### A PostgreSQL® database
 
-You need an existing PostgreSQL® database, and you need to populate it with 
-image names/URLs and their corresponding embeddings.
+You need an existing PostgreSQL® database, with the pgvector extension installed.
 
 An Aiven for PostgreSQL service will do very well - see the
 [Create a service](https://aiven.io/docs/products/postgresql/get-started#create-a-service)
 section in the [Aiven documentation](https://aiven.io/docs).
 
-### Sample data in the database
+### The CLIP application
 
-To populate the database with sample data, you need
-1. To get the clip app running (you'll also need this to make queries). See 
-   the [`clip_app` README](../clip_app/README.md)
-2. To run the database setup script. This also depends on the clip app.
-   See the [`setup_db` README](../setup_db/README.md).
+The CLIP application is needed to generate embeddings, both for the sample
+images, and also for the text prompts from the user.
+
+To get the clip app running, see the [`clip_app` README](../clip_app/README.md)
 
 ## Set the environment variable to access your database
 
@@ -104,7 +117,8 @@ You should get four images back.
 
 ## The `find_images` script
 
-You can run `find_images.py` to check that everything is working without
+If the CLIP app is running and the database is populated with examples, you can
+run `find_images.py` to check that everything is working without
 starting up the web app. It looks for images matching the text `man jumping` and
 reports their filenames. It needs the same environment variables setting as the
 main `clip_app`.
