@@ -7,6 +7,7 @@ license = "Apache-2.0"
 dependencies = [
   "typing",
   "fastapi[standard]",
+  "httpx",
   "jinja2",
   "psycopg[binary]",
   "python-dotenv",
