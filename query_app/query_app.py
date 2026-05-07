@@ -100,6 +100,7 @@ def wait_for_clip_service() -> None:
             # For instance
             #   Error getting CLIP service readiness from http://mm-search-clip-app:8000: ConnectError: [Errno -2] Name or service not known
             # This happens when the CLIP service has not come up yet. If we keep trying, will it eventually "get better"?
+            time.sleep(TIME_TO_WAIT_FOR_CLIP_SERVICE)
             continue
             #raise Exception(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
 
