@@ -9,6 +9,7 @@
 import logging
 import os
 import sys
+import time
 
 from pathlib import Path
 
@@ -17,6 +18,7 @@ import psycopg
 import psycopg.errors
 
 from dotenv import load_dotenv
+from fastapi import status
 
 
 logging.basicConfig(
@@ -64,6 +66,32 @@ PHOTOS_URL_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-s
 # Batch size for processing images and indexing embeddings
 batch_size = 100
 
+TIME_TO_WAIT_FOR_CLIP_SERVICE = 20
+
+
+def wait_for_clip_service() -> None:
+    """Wait for the CLIP service to be ready.
+    """
+    logger.info('Waiting for CLIP service')
+    while True:
+        try:
+            response = httpx.get(
+                f'{CLIP_SERVICE_URL}/healthy',
+                timeout=None,    # the default is documented as 5 seconds
+            )
+            if response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+                # Wait for a moment...
+                time.sleep(TIME_TO_WAIT_FOR_CLIP_SERVICE)
+                continue
+            else:
+                response.raise_for_status()
+
+            logger.info('CLIP service is ready')
+
+        except Exception as exc:
+            logger.error(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+            raise Exception(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+
 
 def create_table():
     """Enable pgvector and set up our table.
@@ -75,10 +103,7 @@ def create_table():
     try:
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
-                cur.execute('CREATE EXTENSION vector;')
-    except psycopg.errors.DuplicateObject as exc:
-        # pgvector was already enabled - ignore it
-        logger.info(f'{exc.__class__.__name__}: {exc}')
+                cur.execute('CREATE EXTENSION IF NOT EXISTS vector;')
     except Exception as exc:
         logger.error(f'Error enabling pgvector; {exc.__class__.__name__}: {exc}')
         raise
@@ -218,6 +243,7 @@ def populate_table():
 
 
 def main():
+    wait_for_clip_service()
     create_table()
     populate_table()
 

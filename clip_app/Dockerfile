@@ -10,9 +10,8 @@ COPY clip_app.py /app
 COPY ./model_info.py /app
 COPY ./download_model.py /app
 
-# Get the model so that it's ready when the app starts
+# Create the directory where we'll download the model
 RUN mkdir -p /app/models/
-RUN /app/download_model.py
 
 # Bind to 0.0.0.0, not localhost or 127.0.0.1, so that we're visible
 # to the other application
