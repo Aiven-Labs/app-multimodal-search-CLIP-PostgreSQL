@@ -45,13 +45,13 @@ again later.
 
 ## Four ways to run this code
 
-1. With its own PostgreSQL database, using the `compose.yaml` file.
-2. With an external PostgreSQL database, using the `compose,existing-db.yaml`
-3. At the command line, using an external PG database.
-4. Via the container file, using an external PG database.
+1. Using the `compose.yaml` file, which creates its own PostgreSQL database.
+2. Using the `compose,existing-db.yaml`, with an existing database
+3. At the command line, with an existing database
+4. Using the container file `query_app/Dockerfile`, with an external database
 
 <details>
-<summary>Using compose to create all the services, including PostgreSQL</summary>
+<summary>1. Using compose to create all the services, including PostgreSQL</summary>
 
 ## Using compose to create all the services, including PostgreSQL
 
@@ -91,9 +91,9 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 </details>
 
 <details>
-<summary>Using an external PostgreSQL database</summary>
+<summary>Setting up an external PostgreSQL database</summary>
 
-## Using an external PostgreSQL database
+## Setting up an external PostgreSQL database
 
 ### Create your external PostgreSQL® database
 
@@ -133,9 +133,9 @@ We'll refer to that URL as `<service URI>` in the following notes.
 </details>
 
 <details>
-<summary>Using compose with an external PostgreSQL database</summary>
+<summary>2. Using compose with an existing PostgreSQL database</summary>
 
-## Using compose with an external PostgreSQL database
+## Using compose with an existing PostgreSQL database
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -151,9 +151,9 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 </details>
 
 <details>
-<summary>At the command line, using an external PG database</summary>
+<summary>3. At the command line, with an existingPG database</summary>
 
-## At the command line, using an external PG database
+## At the command line, with an existing PG database
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -188,9 +188,9 @@ fastapi dev query_app.py --port 3000
 </details>
 
 <details>
-<summary>Via the container file, using an external PG database</summary>
+<summary>4. Using the container file, with an existing PG database</summary>
 
-## Via the container file, using an external PG database
+## Using the container file, with an existing PG database
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
