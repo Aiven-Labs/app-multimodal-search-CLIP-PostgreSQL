@@ -50,7 +50,8 @@ again later.
 3. At the command line, using an external PG database.
 4. Via the container file, using an external PG database.
 
-## Using compose to create all the services, including PostgreSQL
+<details>
+<summary>Using compose to create all the services, including PostgreSQL</summary>
 
 ### Set environment variables to describe your database
 
@@ -78,7 +79,6 @@ These will be used when creating the database service.
   ```
   
 > And as it says, please use a proper password 🙂.
-
 ### Create the images and start the services:
 
 ```shell
@@ -86,8 +86,10 @@ docker compose up -d
 ```
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+</details>
 
-## Using an external PostgreSQL database
+<details>
+<summary>Using an external PostgreSQL database</summary>
 
 ### Create your external PostgreSQL® database
 
@@ -124,8 +126,10 @@ We'll refer to that URL as `<service URI>` in the following notes.
   ```shell
   DATABASE_URL=<service URI>
   ```
+</details>
 
-## Using compose with an external PostgreSQL database
+<details>
+<sumary>Using compose with an external PostgreSQL database</sumary>
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -138,8 +142,10 @@ docker compose -f compose.existing-db.yaml up -d
 ```
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+</details>
 
-## At the command line, using an external PG databasee
+<details>
+<summary>At the command line, using an external PG database</summary>
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -171,8 +177,10 @@ Run the app using fastapi
 ```shell
 fastapi dev query_app.py --port 3000
 ```
+</details>
 
-## Via the container file, using an external PG database.
+<details>
+<summary>Via the container file, using an external PG database</summary>
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -195,6 +203,7 @@ docker run -d --name query_app_container \
     -e DATABASE_URL=$DATABASE_URL \
     query_app_image
 ```
+</details>
 
 ## Make a query
 
