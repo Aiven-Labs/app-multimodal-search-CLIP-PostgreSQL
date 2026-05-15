@@ -51,7 +51,7 @@ again later.
 4. Via the container file, using an external PG database.
 
 <details>
-<summary>Using compose to create all the services, including PostgreSQL</summary>
+<summary>## Using compose to create all the services, including PostgreSQL</summary>
 
 ### Set environment variables to describe your database
 
@@ -129,7 +129,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 </details>
 
 <details>
-<sumary>Using compose with an external PostgreSQL database</sumary>
+<summary>Using compose with an external PostgreSQL database</summary>
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
