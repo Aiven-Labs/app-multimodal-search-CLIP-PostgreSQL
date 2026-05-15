@@ -51,7 +51,8 @@ again later.
 4. Using the container file `query_app/Dockerfile`, with an external database
 
 <details>
-<summary>1. Using compose to create all the services, including PostgreSQL</summary>
+<summary>1. Using compose to create all the services, including 
+PostgreSQL</summary>
 
 ## Using compose to create all the services, including PostgreSQL
 
@@ -138,7 +139,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 ## Using compose with an existing PostgreSQL database
 
 Set up the external database - see
-[Using an external PostgreSQL database](#using-an-external-postgresql-database)
+[Setting up an external PostgreSQL database](#setting-up-an-external-postgresql-database)
 above.
 
 ### Create the images and start the services
@@ -156,7 +157,7 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 ## At the command line, with an existing PG database
 
 Set up the external database - see
-[Using an external PostgreSQL database](#using-an-external-postgresql-database)
+[Setting up an external PostgreSQL database](#setting-up-an-external-postgresql-database)
 above.
 
 Change into the `query_app` directory
@@ -193,7 +194,7 @@ fastapi dev query_app.py --port 3000
 ## Using the container file, with an existing PG database
 
 Set up the external database - see
-[Using an external PostgreSQL database](#using-an-external-postgresql-database)
+[Setting up an external PostgreSQL database](#setting-up-an-external-postgresql-database)
 above.
 
 Change into the `query_app` directory
