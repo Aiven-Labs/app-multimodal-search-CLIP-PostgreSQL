@@ -51,7 +51,8 @@ again later.
 4. Via the container file, using an external PG database.
 
 <details>
-<summary>**Using compose to create all the services, including PostgreSQL**</summary>
+<summary>Using compose to create all the services, including PostgreSQL</summary>
+## Using compose to create all the services, including PostgreSQL
 
 ### Set environment variables to describe your database
 
@@ -90,6 +91,7 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 <details>
 <summary>Using an external PostgreSQL database</summary>
+## Using an external PostgreSQL database
 
 ### Create your external PostgreSQL® database
 
@@ -130,6 +132,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 
 <details>
 <summary>Using compose with an external PostgreSQL database</summary>
+## Using compose with an external PostgreSQL database
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -146,6 +149,7 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 <details>
 <summary>At the command line, using an external PG database</summary>
+## At the command line, using an external PG database
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
@@ -181,6 +185,7 @@ fastapi dev query_app.py --port 3000
 
 <details>
 <summary>Via the container file, using an external PG database</summary>
+## Via the container file, using an external PG database
 
 Set up the external database - see
 [Using an external PostgreSQL database](#using-an-external-postgresql-database)
