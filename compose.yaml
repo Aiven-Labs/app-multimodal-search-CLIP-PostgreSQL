@@ -1,22 +1,7 @@
-# This compose file creates the multimodal search services, including
-# a PostgreSQL database with the pgvector plugin built in.
+# This compose file creates the multimodal search query app,
+# and a suitable PostgreSQL database with the pgvector plugin built in.
 
 services:
-
-  mm-search-clip-app:
-    build:
-      context: ./clip_app
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    healthcheck:
-      # Is the CLIP app service ready to respond to queries?
-      test: [ "CMD", "python3", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/started').raise_for_status()" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
 
   mm-search-query-app:
     build:
@@ -27,12 +12,9 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm-search-postgres-db:5432/${POSTGRES_DB}
-      CLIP_SERVICE_URL: http://mm-search-clip-app:8000
     depends_on:
       mm-search-postgres-db:
        condition: service_healthy
-      mm-search-clip-app:
-        condition: service_healthy
 
   mm-search-postgres-db:
    image: pgvector/pgvector:pg17

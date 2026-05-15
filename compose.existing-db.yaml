@@ -1,55 +1,10 @@
-# The services in this compose file assume that there is a PostgreSQL
-# database running at $DATABASE_URL. This compose file does not attempt
-<<<<<<< HEAD
-# to create or manage that database in any way.
-=======
-# to create or manage that database in any way. The PG database needs
-# to have the pgvector extension installed.
->>>>>>> 0f15f7f (Add back in instructions for using an external db)
-#
-# This compose file should otherwise be identical to `compose.yaml`,
-# which *does* create/manage a PG database.
+# This compose file assumes that there is a PostgreSQL database running at
+# $DATABASE_URL. This compose file does not attempt to create or manage that
+# database in any way. The PG database needs to have the pgvector extension
+# installed.
 
 services:
-
-<<<<<<< HEAD
-  mm_search_clip_app:
-=======
-  mm-search-clip-app:
->>>>>>> 0f15f7f (Add back in instructions for using an external db)
-    build:
-      context: ./clip_app
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    healthcheck:
-      # Is the CLIP app service ready to serve embeddings?
-      test: [ "CMD", "python3", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/healthy').raise_for_status()" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-<<<<<<< HEAD
-  mm_search_setup_db:
-    build:
-      context: ./setup_db
-      dockerfile: Dockerfile
-    deploy:
-      restart_policy:
-        condition: none
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - CLIP_SERVICE_URL=http://mm_search_clip_app:8000
-    depends_on:
-      mm_search_clip_app:
-        condition: service_healthy
-
-  mm_search_query_app:
-=======
   mm-search-query-app:
->>>>>>> 0f15f7f (Add back in instructions for using an external db)
     build:
       context: ./query_app
       dockerfile: Dockerfile
@@ -58,17 +13,3 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-<<<<<<< HEAD
-      - CLIP_SERVICE_URL=http://mm_search_clip_app:8000
-    depends_on:
-      mm_search_setup_db:
-        condition: service_completed_successfully
-      mm_search_clip_app:
-=======
-      - CLIP_SERVICE_URL=http://mm-search-clip-app:8000
-    depends_on:
-      mm-search-setup-db:
-        condition: service_completed_successfully
-      mm-search-clip-app:
->>>>>>> 0f15f7f (Add back in instructions for using an external db)
-        condition: service_healthy

@@ -9,20 +9,31 @@ import os
 import time
 
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
-from typing import Annotated, List
-
-import psycopg
+from typing import Annotated, Callable, List, Sequence, Union
+from urllib.parse import urlparse
 
 import httpx
+import psycopg
+import torch
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Form
+from fastapi import HTTPException
 from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from PIL import Image
+from PIL.ImageFile import ImageFile
 from pydantic import BaseModel
+from transformers import CLIPProcessor, CLIPModel
+
+# Get our model name and directories
+from download_model import download_model
+from model_info import *
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,16 +62,6 @@ CLIP_SERVICE_URL = os.environ.get('CLIP_SERVICE_URL', 'http://localhost:8000')
 # Our table name
 TABLE_NAME = 'pictures'
 
-# Let's keep a readiness status
-class AppStatus:
-    ready = False
-    message = 'Waiting for CLIP service'
-
-app_status = AppStatus()
-
-# ===========================================================================
-# SET UP CLIP MODEL AND DATABASE
-
 # Our images are in the GitHub repository, at
 # https://github.com/Aiven-Labs/app-multimodal-search-CLIP-PostgreSQL/tree/main/photos
 # but the files there are not meant to be accessed as HTTP resources, so we need
@@ -72,43 +73,59 @@ PHOTOS_URL_BASE = 'https://raw.githubusercontent.com/Aiven-Labs/app-multimodal-s
 # Batch size for processing images and indexing embeddings
 batch_size = 100
 
-TIME_TO_WAIT_FOR_CLIP_SERVICE = 20
+# Let's keep a readiness status
+class AppStatus:
+    ready = False
+    message = 'Loading necessary information'
+
+app_status = AppStatus()
+
+# ===========================================================================
+# Download the CLIP model
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def wait_for_clip_service() -> None:
-    """Wait for the CLIP service to be ready.
+@dataclass
+class Model:
+    """The types of the values are found from the docstring for clip.load
+
+    See also the source code at https://github.com/openai/CLIP/blob/main/clip/clip.py
+
+    (we could just make them type Any, but it's interesting to know the actual types)
     """
-    logger.info('Waiting for CLIP service')
-    while True:
-        try:
-            response = httpx.get(
-                f'{CLIP_SERVICE_URL}/healthy',
-                timeout=None,    # the default is documented as 5 seconds
-            )
-            if response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-                # Wait for a moment...
-                time.sleep(TIME_TO_WAIT_FOR_CLIP_SERVICE)
-                continue
-            else:
-                response.raise_for_status()
+    model: Union[None, torch.nn.Module]
+    preprocess: Union[None, Callable[[Image], torch.Tensor]]
 
-            logger.info('CLIP service is ready')
-            return
+clip_model = Model(None, None)
 
-        except Exception as exc:
-            logger.error(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
-            # For instance
-            #   Error getting CLIP service readiness from http://mm-search-clip-app:8000: ConnectError: [Errno -2] Name or service not known
-            # This happens when the CLIP service has not come up yet. If we keep trying, will it eventually "get better"?
-            time.sleep(TIME_TO_WAIT_FOR_CLIP_SERVICE)
-            continue
-            #raise Exception(f'Error getting CLIP service readiness from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
 
+def load_clip_model():
+    """Load the open CLIP model"""
+
+    # If the MODEL_DIR doesn't exist, then assume we need to download the model.
+    # We *could* just allow the call of `CLIPModel.from_pretrained` to do the
+    # download for us, but our `download_model` function actually downloads
+    # less data / fewer files, so should be a bit quicker and use less space.
+    if not MODEL_DIR.exists():
+        download_model()
+
+    try:
+        # Load the open CLIP model that we just downloaded
+        logger.info(f'Importing CLIP model {MODEL_NAME} from {MODEL_DIR}')
+        logger.info(f'Using device {DEVICE} for model calculations')
+        clip_model.model = CLIPModel.from_pretrained(MODEL_DIR).to(DEVICE)
+        clip_model.processor = CLIPProcessor.from_pretrained(MODEL_DIR)
+        logger.info(f'CLIP model {MODEL_NAME} imported')
+    except Exception as exc:
+        logger.exception(f'Unable to load CLIP model {MODEL_NAME}')
+
+
+# ===========================================================================
+# SET UP CLIP MODEL AND DATABASE
 
 def create_table():
     """Enable pgvector and set up our table.
-
-    Assumes that if anything goes wrong, it's something we can ignore
     """
     # Enable pgvector seperately, in case I DROP the table and want to recreate it
     logger.info('Enabling pgvector')
@@ -116,9 +133,12 @@ def create_table():
         with psycopg.connect(DATABASE_URL) as conn:
             with conn.cursor() as cur:
                 cur.execute('CREATE EXTENSION IF NOT EXISTS vector;')
+    except psycopg.OperationalError as exc:
+        logger.exception(f'Error talking to database (enabling pgvector); {exc.__class__.__name__}: {exc}')
+        raise Exception(f"Error connecting to database: {exc}")
     except Exception as exc:
-        logger.error(f'Error enabling pgvector; {exc.__class__.__name__}: {exc}')
-        raise
+        logger.exception(f'Error enabling pgvector; {exc.__class__.__name__}: {exc}')
+        raise Exception(f"Error enabling pgvector: {exc}")
 
     logger.info('Creating table')
     try:
@@ -131,32 +151,8 @@ def create_table():
         # The table already existed
         logger.info(f'{exc.__class__.__name__}: {exc}')
     except Exception as exc:
-        logger.error(f'Error creating table {TABLE_NAME}; {exc.__class__.__name__}: {exc}')
-        raise
-
-
-def compute_clip_features(photo_file_path: str) -> list[float]:
-    #logger.info(f'Requesting embeddings for {photo_file_path}')
-    try:
-        response = httpx.post(
-            f'{CLIP_SERVICE_URL}/embed',
-            json={
-                "model_name": MODEL_NAME,
-                "datatype": "image",
-                "value": photo_file_path,
-            },
-            timeout=None,    # the default is documented as 5 seconds
-        )
-        response.raise_for_status()
-
-        #logger.info(f'Received embeddings for {photo_file_path}')
-
-        data = response.json()
-        return data["embedding"]
-    except Exception as exc:
-        logger.error(f'Error getting image embeddings from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
-        #raise Exception('Unable to get text embedding')
-        raise Exception(f'Error getting image embeddings from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+        logger.exception(f'Error creating table {TABLE_NAME}; {exc.__class__.__name__}: {exc}')
+        raise Exception(f"Error creating table {TABLE_NAME}: {exc}")
 
 
 def index_embeddings_to_postgres(data):
@@ -177,8 +173,8 @@ def index_embeddings_to_postgres(data):
                     for row in data:
                         copy.write_row(row)
     except Exception as exc:
-        logger.error(f'{exc.__class__.__name__}: {exc}')
-        raise
+        logger.exception(f'{exc.__class__.__name__}: {exc}')
+        raise Exception("Unable to write to database")
 
 
 def entry_already_exists(file_name: str) -> bool:
@@ -194,7 +190,7 @@ def entry_already_exists(file_name: str) -> bool:
                 results = cur.fetchall()
                 return len(results) > 0
     except Exception as exc:
-        logger.error(f'Unable to query database {exc.__class__.__name__}: {exc}')
+        logger.exception(f'Unable to query database {exc.__class__.__name__}: {exc}')
         raise Exception(f'Unable to query database')
 
 
@@ -228,35 +224,50 @@ def populate_table():
 
     # Especially during development, this app can be run after the database table has
     # already been partially populated. We don't want the cost of getting an embedding
-    # for an entry we've already got, so we'll put up with an extra SQL query, assuming
+    # for an entry we've already got, so we'll put up with extra SQL queries, assuming
     # that's faster/cheaper.
-    logger.info(f'Adding {len(image_file_names)} image embeddings to the database in batches of {batch_size}')
-    data = []
-    logged_skipping = False
-    batch_count = 1
-    total = 0
-    for filename in image_file_names:
+
+    # Work out which files we need to add and which are there already
+    logger.info(f'Checking {len(image_file_names)} filenames')
+    app_status.message = 'Checking examples in PostgreSQL database. Please try again later'
+    # We assume that we always use the same list of file names, in the same order.
+    # Given that, check until we find a missing entry. Since we already checked
+    # if the last entry was present (above) we expect not to have to check them all :)
+
+    # Our "null hypothesis" is if there are no entries, then we use the same list
+    actual_file_names = image_file_names
+
+    for index, filename in enumerate(image_file_names):
         # If we already have an entry in the database, skip it
-        if entry_already_exists(filename):
-            if not logged_skipping:
-                logger.info(f'Skipping entries that already exist')
-                app_status.message = 'Checking examples in PostgreSQL database'
-                logged_skipping = True
-            total += 1
-            continue
+        if not entry_already_exists(filename):
+            logger.info(f'Entry {index} is not there - we can add the rest')
+            actual_file_names = image_file_names[index:]
+            break
 
-        # Calculate the embedding for this filename's data and add it to our list
-        file_url = f'{PHOTOS_URL_BASE}/{filename}'
-        embedding = compute_clip_features(file_url)
-        data.append((filename, file_url, vector_to_string(embedding)))
+    logger.info(f'Adding {len(actual_file_names)} image embeddings to the database in batches of {batch_size}')
+    total = 0
+    data = []
+    app_status.message = 'Adding examples to PostgreSQL database. Please try again later'
 
+    for i in range(0, len(actual_file_names), batch_size):
+        batch_files = actual_file_names[i:i + batch_size]
+        batch_urls = [f'{PHOTOS_URL_BASE}/{file}' for file in batch_files]
+
+        batch_image_data = [get_image_data(url) for url in batch_urls]
+
+        # Compute embeddings for the batch of images
+        batch_embeddings = get_image_embeddings(batch_image_data)
+
+        # Create data dictionary for indexing
+        for file_name, file_url, embedding in zip(batch_files, batch_urls, batch_embeddings):
+            data.append((file_name, file_url, vector_to_string(embedding)))
+
+        # Check if we have enough data to index
         if len(data) >= batch_size:
-            logger.info(f'Adding batch {batch_count} of image embeddings')
             index_embeddings_to_postgres(data)
-            batch_count += 1
             total += len(data)
             data = []
-            app_status.message = f'Adding examples to PostgreSQL database ({total}/{len(image_file_names)})'
+            app_status.message = f'Adding examples to PostgreSQL database ({total}/{len(actual_file_names)}). Please try again later'
 
     # Index any remaining data
     if data:
@@ -266,19 +277,34 @@ def populate_table():
     logger.info("All image embeddings added")
 
 
-def setup_database():
-    app_status.message = "Waiting for CLIP service"
-    wait_for_clip_service()
-    app_status.message = "PostgreSQL database is not set up"
-    create_table()
-    app_status.message = "Adding examples to PostgreSQL database"
-    populate_table()
+# ===========================================================================
+# LIFECYCLE
+
+# This gets run as a background task when the app starts up.
+# That means the UI is available as soon as possible, and if the background task
+# has not yet completed, the user gets suitable information when they try a prompt
+def setup_clip_and_database():
+    app_status.message = "Loading CLIP model. Please try again later"
+    load_clip_model()
+    if not clip_model:
+        app_status.message = "Unable to load CLIP model. Please restart the app"
+        # And we give up - `app_status.ready` will never be set True
+        return
+
+    try:
+        app_status.message = "PostgreSQL database is not set up. Please try again later"
+        create_table()
+        app_status.message = "Adding examples to PostgreSQL database. Please try again later"
+        populate_table()
+    except Exception as e:
+        logger.exception(f'Unable to setup database {e.__class__.__name__}: {e}', stack_info=True)
+        app_status.message = f'Unable to setup database: {e}. Please fix and then restart app'
+        # And we give up - `app_status.ready` will never be set True
+        return
+
     app_status.ready = True
     app_status.message = "App is ready for queries"
 
-
-# ===========================================================================
-# LIFECYCLE
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -288,34 +314,77 @@ async def lifespan(app: FastAPI):
     and still give _some_ response to the user
     """
     logger.info('Async load task starting')
-    blocking_loader = asyncio.to_thread(setup_database)
+    blocking_loader = asyncio.to_thread(setup_clip_and_database)
     background_task = asyncio.create_task(blocking_loader)
     yield
     # We don't have an unload step
 
-
 # ===========================================================================
 # QUERIES
 
-async def get_text_embedding(text) -> List[float]:
-    logger.info(f'Requesting embeddings for {text}')
+def get_image_data(url: str) -> ImageFile:
+    """Load image data from a URL.
+
+    We assume a "file:" URL for a local file, or an "http:" or "https:" URL
+    for remote data.
+
+    May raise an Exception if an error occurs retrieving the remote data
+    """
+    if url.startswith('file:'):
+        parsed_url = urlparse(url)
+        file_path = Path(parsed_url.path)
+        return Image.open(file_path)
+
+    # Retrieve the URL
     try:
-        response = httpx.post(
-            f'{CLIP_SERVICE_URL}/embed',
-            json={
-                "model_name": MODEL_NAME,
-                "datatype": "text",
-                "value": text,
-            },
+        response = httpx.get(
+            url,
+            follow_redirects=True,  # For instance, we know that the GitHub URLs we use will redirect
         )
         response.raise_for_status()
-
-        data = response.json()
-        return data["embedding"]
     except Exception as exc:
-        logger.error(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
-        #raise Exception('Unable to get text embedding')
-        raise Exception(f'Error getting text embedding from {CLIP_SERVICE_URL}: {exc.__class__.__name__}: {exc}')
+        raise Exception(f'Error getting image {url}: {exc}')
+
+    # Turn the bytes into a "file like" object for PIL
+    image_bytes = BytesIO(response.content)
+
+    return Image.open(image_bytes)
+
+
+def get_image_embeddings(image_data: Sequence[ImageFile]):
+    with torch.no_grad():
+        inputs = clip_model.processor(
+            images=[image_data],
+            return_tensors='pt',
+            padding=True,           # do we need this?
+        ).to(DEVICE)
+
+        # Compute the feature vectors
+        features = clip_model.model.get_image_features(**inputs)
+
+        # Normalise the embeddings, to make them easier to compare
+        features /= features.norm(dim=-1, keepdim=True)
+
+    # Return the feature vectors
+    return features.numpy()
+
+
+def get_text_embedding(text: str) -> List[float]:
+    with torch.no_grad():
+        inputs = clip_model.processor(
+            text=[text],
+            return_tensors='pt',
+            padding=True,           # do we need this?
+        ).to(DEVICE)
+
+        # Compute the feature vectors
+        features = clip_model.model.get_text_features(**inputs)
+
+        # Normalise the embeddings, to make them easier to compare
+        features /= features.norm(dim=-1, keepdim=True)
+
+    # Return the feature vector
+    return features.numpy()[0].tolist()
 
 
 def vector_to_string(embedding):
@@ -326,10 +395,10 @@ def vector_to_string(embedding):
     return vector_str
 
 
-async def search_for_matches(text):
+def search_for_matches(text):
     """Returns pairs of the form (image_name, image_url)"""
     logger.info(f'Searching for {text!r}')
-    vector = await get_text_embedding(text)
+    vector = get_text_embedding(text)
 
     embedding_string = vector_to_string(vector)
 
@@ -371,27 +440,20 @@ async def search_form(request: Request, search_text: Annotated[str, Form()]):
     logging.info(f'Search form requests {search_text!r}')
 
     if not app_status.ready:
+        logger.info(f'App status: {app_status.message}')
         return templates.TemplateResponse(
             request=request,
             name="images.html",
             context={
                 "images": [],
-                "error_message": f"{app_status.message} - please try again later",
+                "error_message": f"{app_status.message}",
             }
         )
 
-    # It would also be nice to be able to check if the database is populated yet.
-    # We _could_ COUNT the records in the database, and report how many / complain if
-    # there aren't enough, or we _could_ make the setup_db callable into another
-    # service, and then we could ask it. Leaving that running forever when it's only
-    # got one thing to do might seem excessive, but if there's a service to add new
-    # images (and their embeddings) to the database, then we could use that to add
-    # the capability of adding more images to _this_ app.
-    # For now, we'll just ignore the problem for the moment...
-
     try:
-        results = await search_for_matches(search_text)
+        results = search_for_matches(search_text)
     except Exception as e:
+        logger.exception(f'Error searching for {search_text!r}: {e.__class__.__name__}: {e}', stack_info=True)
         return templates.TemplateResponse(
             request=request,
             name="images.html",

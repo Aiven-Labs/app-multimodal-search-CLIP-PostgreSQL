@@ -1,6 +1,6 @@
 [project]
 name = "multimodal-CLIP-demo__query_app"
-version = "2026.3.13"
+version = "2026.6.15"
 readme = "README.md"
 license = "Apache-2.0"
 
@@ -9,10 +9,20 @@ dependencies = [
   "fastapi[standard]",
   "httpx",
   "jinja2",
-  "psycopg[binary]",
   "python-dotenv",
+  # Database stuff
+  "psycopg[binary]",
+  # CLIP stuff
+  "pillow",  # reading images
+  "torch",
+  "huggingface_hub",
+  #"transformers",
+  # Version 5 of the HuggingFace transformers package introduced a
+  # breaking change to the output of get_image_features. For now
+  # stick with an older version.
+  "transformers==4.57.3",  # try an old version of transformers
 ]
 
 [tool.setuptools.packages]
-# We've just got our clip_app.py at the top level, nothing to look for
+# We've just got our query_app.py at the top level, nothing to look for
 find = {namespaces = false}

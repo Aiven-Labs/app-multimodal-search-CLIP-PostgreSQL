@@ -10,45 +10,45 @@ A Python web app that searches for images matching a given text
 
 ## Architecture
 
-There are three components in use here:
+There are two components in use here:
 
 * A PostgreSQL® database, with the `pgvector` extension installed. This 
   is used to store image and text embeddings
 * A FastAPI application that can take a text, or the URL for am image file, 
   and use the CLIP model to calculate the vector embedding for that text or 
   image.
-* A FastAPI application that:
 
-  1. Waits for the CLIP app to be ready.
-  2. Sets the database up. It makes sure that `pgvector` is enabled, and then
-     uses the CLIP app to calculate the embedding for each image in the
-     `photos` directory. It adds an entry in the database for each image
-     name/URL and its embedding.
-  3. Allows the user to enter a text string. It uses the CLIP app to calculate
-     the embedding for the text string, and then looks in the database for
-     images with a similar embedding, so that it can present the four closest
-     images to the user.
+When the app starts up, it runs a background task to:
+
+1. Download the CLIP model.
+2. Make sure that `pgvector` is enabled in the database
+3. Calculate the embedding for each of the sample images (named in the
+   `image_name.txt` file) and add a record for that image and its embedding
+   into the database table. If this process has already been done for the
+   database, it won't repeat it.
+
+   > **Note:** It doesn't attempt to cope with two instances of this app both 
+   > trying to populate the database at the same time.
+ 
+Meanwhile it also starts the actual query frontend, which
+
+1. Gets a text prompt from the user
+2. Asks the CLIP model for the embedding for that text prompt
+3. Queries the database for matches
+4. Shows the first/best four matching pictures to the user
+
+That will only work if the backgroud thread has completed. If not, you'll get
+an informative message explaining how far it has got, and a request to try
+again later.
 
 ![Showing the first match for "man jumping" in the query app](slides/images/app-man-jumping.png)
 
 ## Four ways to run this code
 
-1. As a single self-contained service, complete with its own PostgreSQL 
-   database, using the `compose.yaml` file.
-2. As a single self-contained service with an external PostgreSQL database, 
-   using the `compose,existing-db.yaml`
-3. As two separate services at the command line, using an external PG
-   database.
-4. As two separate containers, using an external PG database.
-
-The instructions for the first two are below.
-
-A summary of how to do the last two
-[is also below](#running-individual-services), but details are in the 
-individual README files in each service subdirectory
-([`clip_app`](./clip_app/README.md),
-[`setup_db`](./setup_db/README.md),
-[`query_app`](./query_app/README.md)).
+1. With its own PostgreSQL database, using the `compose.yaml` file.
+2. With an external PostgreSQL database, using the `compose,existing-db.yaml`
+3. At the command line, using an external PG database.
+4. Via the container file, using an external PG database.
 
 ## Using compose to create all the services, including PostgreSQL
 
@@ -87,8 +87,7 @@ docker compose up -d
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
-
-## Using compose with an external PostgreSQL database
+## Using an external PostgreSQL database
 
 ### Create your external PostgreSQL® database
 
@@ -101,7 +100,7 @@ section in the [Aiven documentation](https://aiven.io/docs).
 
 ### Set the environment variable to access your database
 
-Since the database already exists, you need to let the other services know 
+Since the database already exists, you need to let the other services know
 how to connect to it. The URL you need should look something like
 > `postgres://<user>:<password>@<host>:<port>/dbname?sslmode=require`
 
@@ -126,6 +125,12 @@ We'll refer to that URL as `<service URI>` in the following notes.
   DATABASE_URL=<service URI>
   ```
 
+## Using compose with an external PostgreSQL database
+
+Set up the external database - see
+[Using an external PostgreSQL database](#using-an-external-postgresql-database)
+above.
+
 ### Create the images and start the services
 
 ```shell
@@ -134,20 +139,74 @@ docker compose -f compose.existing-db.yaml up -d
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
+## At the command line, using an external PG databasee
 
-## Running individual services
+Set up the external database - see
+[Using an external PostgreSQL database](#using-an-external-postgresql-database)
+above.
 
-The order in which things are done matters, because the different services 
-depend on each other.
+Change into the `query_app` directory
+```shell
+cd query_app
+```
 
-1. Create an external database, as described in [Using compose with an 
-   external PostgreSQL database](#using-compose-with-an-external-postgresql-database)
-2. Start the CLIP application, as described in
-   [`the clip_app README`](./clip_app/README.md)
-3. Start the query application, as described in
-   [the `query_app README`](./query_app/README.md)
+If you didn't already do so, create a virtual environment to keep
+package installation local to this directory
+```shell
+python3 -m venv venv
+```
 
-And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+Enable it - this shows doing so for a normal Unix shell, there are other
+scripts for (for instance) the `fish` shell
+```shell
+source venv/bin/activate
+```
+
+Install the Python packages we need
+```shell
+python3 -m pip install .
+```
+
+Run the app using fastapi
+```shell
+fastapi dev query_app.py --port 3000
+```
+
+## Via the container file, using an external PG database.
+
+Set up the external database - see
+[Using an external PostgreSQL database](#using-an-external-postgresql-database)
+above.
+
+Change into the `query_app` directory
+```shell
+cd query_app
+```
+
+Build the image.
+```
+docker build -t query_app_image .
+```
+
+Run the container. Pass the PostgreSQL service URI as an environment variable.
+```
+docker run -d --name query_app_container \
+    -p 3000:3000 \
+    -e DATABASE_URL=$DATABASE_URL \
+    query_app_image
+```
+
+## Make a query
+
+Go to http://127.0.0.1:3000 in a web browser, and request a search.
+
+Possible ideas include:
+* cat
+* man jumping
+* outer space
+
+You should get four images back.
+
 
 ## Other considerations
 
@@ -158,10 +217,12 @@ The images in the `photos` directory are the same as those used in [Workshop: Se
 They came from Unsplash and have been reduced in size to make them fit within
 GitHub filesize limits for a repository.
 
-> **Note** Both `setup_db` and `query_app` retrieve the sample images
+> **Note:** The `query_app` retrieves the sample images
 > directly from this GitHub repository. This is not good practice for a
 > production app, as GitHub is not intended to act as an image repository for
-> web apps.
+> web apps. We **could** copy the `photos` directory into the container image,
+> at the cost of about 43MB. That would also speed up populating the database,
+> as local files would be read.
 
 ### Use the right Python image
 
