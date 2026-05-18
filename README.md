@@ -47,9 +47,9 @@ again later.
 
 1. Using the compose file `compose.yaml` file, which creates its own PostgreSQL 
    database.
-2. Using the compose file `compose.aiven.yaml` and deploying on [Aiven Apps]
-   (https://aiven.io/apps) - this runs the database and the query app within 
-   the Aiven platform
+2. Using the compose file `compose.aiven.yaml` and deploying on
+   [Aiven Apps](https://aiven.io/apps) - this runs the database and the query
+   app within the Aiven platform
 3. Using the compose file `compose,existing-db.yaml`, with an existing database
 4. At the command line, with an existing database
 5. Using the container file `query_app/Dockerfile`, with an external database
@@ -97,18 +97,19 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 
 <details>
 <summary>2. Using Aiven Apps to deploy the services</summary>
+
 ## Using Aiven Apps to deploy the services
 
-> **Note:** At the moment (May 2026) Aiven Apps is in Limited Availability (LA),
-> so this only applies if you have access. See [Aiven Apps](https://aiven.io/apps)
-> for more information.
+> **Note:** At the moment (May 2026) Aiven Apps is in Limited Availability (LA).
+> See [Aiven Apps](https://aiven.io/apps) for more information and how to get
+> access.
 
 How to deploy Aiven Apps is described in the Aiven documentation at
 [Deploy an  app](https://aiven.io/docs/products/apps/deploy-apps).
 
 This is a summary:
 
-1.In the [Aiven Console](https://console.aiven.io/) go to your project and 
+1. In the [Aiven Console](https://console.aiven.io/) go to your project and 
    click **Applications**.
 2. Click **Deploy app**.
 3. Select your **Account**, this repository, and the `main` branch.
@@ -122,7 +123,7 @@ This is a summary:
 The PostgreSQL service will start up, and the query app service will 
 automatically connect to it.
 
-The query app service overview page will show the URL for the query page.
+The query app service **Overview** page will show the URL for the query page.
 
 </details>
 
