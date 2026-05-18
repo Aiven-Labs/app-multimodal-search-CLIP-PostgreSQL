@@ -1,0 +1,26 @@
+# This compose file is for Aiven Apps.
+# It creates the multimodal search query app, and requests a PostgreSQL database.
+# Aiven for PostgreSQL already has the pgvector extension built in.
+
+services:
+
+  mm-search-query-app:
+    build:
+      context: ./query_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm-search-postgres-db:5432/${POSTGRES_DB}
+    depends_on:
+      mm-search-postgres-db:
+       condition: service_healthy
+
+  # We know that Aiven for PostgreSQL has pgvector built in
+  mm-search-postgres-db:
+   image: postgres:17-alpine
+   environment:
+     POSTGRES_DB: ${POSTGRES_DB}
+     POSTGRES_USER: ${POSTGRES_USER}
+     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
