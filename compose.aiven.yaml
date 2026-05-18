@@ -8,14 +8,12 @@ services:
     build:
       context: ./query_app
       dockerfile: Dockerfile
-    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mm-search-postgres-db:5432/${POSTGRES_DB}
     depends_on:
-      mm-search-postgres-db:
-       condition: service_healthy
+      - mm-search-postgres-db
 
   # We know that Aiven for PostgreSQL has pgvector built in
   mm-search-postgres-db:
