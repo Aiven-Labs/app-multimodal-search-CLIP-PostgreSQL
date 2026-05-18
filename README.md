@@ -43,12 +43,16 @@ again later.
 
 ![Showing the first match for "man jumping" in the query app](slides/images/app-man-jumping.png)
 
-## Four ways to run this code
+## Five ways to run this code
 
-1. Using the `compose.yaml` file, which creates its own PostgreSQL database.
-2. Using the `compose,existing-db.yaml`, with an existing database
-3. At the command line, with an existing database
-4. Using the container file `query_app/Dockerfile`, with an external database
+1. Using the compose file `compose.yaml` file, which creates its own PostgreSQL 
+   database.
+2. Using the compose file `compose.aiven.yaml` and deploying on [Aiven Apps]
+   (https://aiven.io/apps) - this runs the database and the query app within 
+   the Aiven platform
+3. Using the compose file `compose,existing-db.yaml`, with an existing database
+4. At the command line, with an existing database
+5. Using the container file `query_app/Dockerfile`, with an external database
 
 <details>
 <summary>1. Using compose to create all the services, including 
@@ -80,7 +84,7 @@ These will be used when creating the database service.
   POSTGRES_PASSWORD=please-do-not-use-this-password
   POSTGRES_DB=embeddings
   ```
-  
+
 > And as it says, please use a proper password 🙂.
 ### Create the images and start the services:
 
@@ -89,6 +93,37 @@ docker compose up -d
 ```
 
 And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
+</details>
+
+<details>
+<summary>2. Using Aiven Apps to deploy the services</summary>
+## Using Aiven Apps to deploy the services
+
+> **Note:** At the moment (May 2026) Aiven Apps is in Limited Availability (LA),
+> so this only applies if you have access. See [Aiven Apps](https://aiven.io/apps)
+> for more information.
+
+How to deploy Aiven Apps is described in the Aiven documentation at
+[Deploy an  app](https://aiven.io/docs/products/apps/deploy-apps).
+
+This is a summary:
+
+1.In the [Aiven Console](https://console.aiven.io/) go to your project and 
+   click **Applications**.
+2. Click **Deploy app**.
+3. Select your **Account**, this repository, and the `main` branch.
+4. Click **Next**.
+5. Select the manifest file `compose.aiven.yaml` and click **Scan**.
+6. Change the configuration of the app components as needed: click the pen 
+   icon on each card. By default a new PostgreSQL service will be created,
+   but you can also choose to use an existing one.
+7. To deploy the app services, click **Deploy**. 
+
+The PostgreSQL service will start up, and the query app service will 
+automatically connect to it.
+
+The query app service overview page will show the URL for the query page.
+
 </details>
 
 <details>
@@ -134,7 +169,7 @@ We'll refer to that URL as `<service URI>` in the following notes.
 </details>
 
 <details>
-<summary>2. Using compose with an existing PostgreSQL database</summary>
+<summary>3. Using compose with an existing PostgreSQL database</summary>
 
 ## Using compose with an existing PostgreSQL database
 
@@ -152,7 +187,7 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 </details>
 
 <details>
-<summary>3. At the command line, with an existingPG database</summary>
+<summary>4. At the command line, with an existingPG database</summary>
 
 ## At the command line, with an existing PG database
 
@@ -189,7 +224,7 @@ fastapi dev query_app.py --port 3000
 </details>
 
 <details>
-<summary>4. Using the container file, with an existing PG database</summary>
+<summary>5. Using the container file, with an existing PG database</summary>
 
 ## Using the container file, with an existing PG database
 
