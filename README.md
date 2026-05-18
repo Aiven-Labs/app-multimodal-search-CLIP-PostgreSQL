@@ -107,18 +107,20 @@ And when that's all running, go to http://0.0.0.0:3000/ to find the prompt.
 How to deploy Aiven Apps is described in the Aiven documentation at
 [Deploy an  app](https://aiven.io/docs/products/apps/deploy-apps).
 
-This is a summary:
+The following is a summary - check the documentation for the most up-to-date 
+information.
 
-1. In the [Aiven Console](https://console.aiven.io/) go to your project and 
+1. Fork this repository. Connect your GitHub account to your Aiven organization.
+2. In the [Aiven Console](https://console.aiven.io/) go to your project and 
    click **Applications**.
-2. Click **Deploy app**.
-3. Select your **Account**, this repository, and the `main` branch.
-4. Click **Next**.
-5. Select the manifest file `compose.aiven.yaml` and click **Scan**.
-6. Change the configuration of the app components as needed: click the pen 
+3. Click **Deploy app**.
+4. Select your **Account**, your forked repository, and the `main` branch.
+5. Click **Next**.
+6. Select the manifest file `compose.aiven.yaml` and click **Scan**.
+7. Change the configuration of the app components as needed: click the pen 
    icon on each card. By default a new PostgreSQL service will be created,
    but you can also choose to use an existing one.
-7. To deploy the app services, click **Deploy**. 
+8. To deploy the app services, click **Deploy**. 
 
 The PostgreSQL service will start up, and the query app service will 
 automatically connect to it.
