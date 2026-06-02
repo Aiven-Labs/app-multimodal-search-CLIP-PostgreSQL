@@ -256,7 +256,8 @@ docker run -d --name query_app_container \
 
 ## Make a query
 
-Go to http://127.0.0.1:3000 in a web browser, and request a search.
+Go to http://127.0.0.1:3000 (for local deployments) or the query app URL (for Aiven Apps)
+in a web browser, and request a search.
 
 Possible ideas include:
 * cat
